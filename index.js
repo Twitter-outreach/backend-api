@@ -65,7 +65,7 @@ app.get("/api/scrape", async (req, res) => {
  };
 
  const userData = await axios.request(userDataOptions);
- const parsedData = JSON.parse(userData.data.data);
+ const parsedData = await JSON.parse(userData.data.data);
  const users = parsedData.users;
 
  const user = await User.findById(userId).select("_id users_DMed liveUpdate");
@@ -89,7 +89,7 @@ app.get("/api/scrape", async (req, res) => {
 
  console.log(op);
 
- const sortedUsers = sortUsers(users, {
+ const sortedUsers = await sortUsers(users, {
   followerRange,
   excludeBioWords,
   usersDMed: user.usersDmed,
