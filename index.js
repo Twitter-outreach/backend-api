@@ -66,7 +66,9 @@ app.get("/api/scrape", async (req, res) => {
 
  const userData = await axios.request(userDataOptions);
  const parsedData = await JSON.parse(userData.data.data);
- const users = parsedData.users;
+ console.log(parsedData)
+ const users = await parsedData.users;
+ console.log(users)
 
  const user = await User.findById(userId).select("_id users_DMed liveUpdate");
 
