@@ -66,8 +66,6 @@ app.get("/api/scrape", async (req, res) => {
 
  const userData = await axios.request(userDataOptions);
  const parsedData = JSON.parse(userData.data.data);
- if (!parsedData.users) throw new Error("no users found");
-
  const users = parsedData.users;
 
  const user = await User.findById(userId).select("_id users_DMed liveUpdate");
