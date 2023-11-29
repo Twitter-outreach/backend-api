@@ -44,7 +44,7 @@ app.get("/api/scrape", async (req, res) => {
  await connectToDB();
 
  const user_url = new URL(url);
- const parts = user_url.pathname.split("/");
+ const parts = url.pathname.split("/");
  const username = parts[1];
 
  const userDataOptions = {
