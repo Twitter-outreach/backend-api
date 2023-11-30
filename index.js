@@ -66,9 +66,20 @@ app.get("/api/scrape", async (req, res) => {
 
  const userData = await axios.request(userDataOptions);
  const parsedData = await JSON.parse(userData.data.data);
- console.log(parsedData)
- const users = await parsedData.users;
- console.log(users)
+ if (!parsedData) return;
+
+ const users = parsedData.users?.map(
+  ({ id_str, name, location, description, followers_count, verified }) => {
+   return {
+    id: id_str,
+    name,
+    location,
+    description: description.toLowerCase(),
+    followers: followers_count,
+    verified,
+   };
+  }
+ );
 
  const user = await User.findById(userId).select("_id users_DMed liveUpdate");
 
@@ -91,7 +102,7 @@ app.get("/api/scrape", async (req, res) => {
 
  console.log(op);
 
- const sortedUsers = await sortUsers(users, {
+ const sortedUsers = sortUsers(users, {
   followerRange,
   excludeBioWords,
   usersDMed: user.usersDmed,
