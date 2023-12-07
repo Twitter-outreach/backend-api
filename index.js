@@ -129,43 +129,43 @@ app.get("/api/scrape", async (req, res) => {
  // console.log(sortedUsers);
  console.log("found prospects: ", sortedUsers.length);
 
- // await User.findOneAndUpdate(
- //  { _id: user._id },
- //  {
- //   $push: {
- //    live_updates: {
- //     messageType: "start_initialization",
- //     message: `Scape initialized: ${sortedUsers.length} prospects found`,
- //    },
- //   },
- //  }
- // );
+ await User.findOneAndUpdate(
+  { _id: user._id },
+  {
+   $push: {
+    live_updates: {
+     messageType: "start_initialization",
+     message: `Scape initialized: ${sortedUsers.length} prospects found`,
+    },
+   },
+  }
+ );
 
- // console.log(`Scrape initialized: ${sortedUsers.length} prospects found`);
- // const currentUserId = JSON.stringify(user._id);
- // await sendDMs(sortedUsers, tokens, salesLetter, op, currentUserId);
+ console.log(`Scrape initialized: ${sortedUsers.length} prospects found`);
+ const currentUserId = JSON.stringify(user._id);
+ await sendDMs(sortedUsers, tokens, salesLetter, op, currentUserId);
 
- // const totalDms = await Op.findById(op.id).select("usersDMed");
+ const totalDms = await Op.findById(op.id).select("usersDMed");
 
- // await Op.findOneAndUpdate(
- //  { _id: op._id },
- //  {
- //   status: "COMPLETED",
- //  }
- // );
+ await Op.findOneAndUpdate(
+  { _id: op._id },
+  {
+   status: "COMPLETED",
+  }
+ );
 
- // await User.findOneAndUpdate(
- //  { _id: user._id },
- //  {
- //   $push: {
- //    live_updates: {
- //     messageType: "done",
- //     message: `Scrape done: ${totalDms.usersDMed.length} Dms sent`,
- //    },
- //   },
- //  }
- // );
- // console.log(`Scrape done: ${totalDms.usersDMed.length} Dms sent`);
- // console.log("scrape is complete");
+ await User.findOneAndUpdate(
+  { _id: user._id },
+  {
+   $push: {
+    live_updates: {
+     messageType: "done",
+     message: `Scrape done: ${totalDms.usersDMed.length} Dms sent`,
+    },
+   },
+  }
+ );
+ console.log(`Scrape done: ${totalDms.usersDMed.length} Dms sent`);
+ console.log("scrape is complete");
  return;
 });
