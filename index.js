@@ -48,8 +48,9 @@ app.get("/api/scrape", async (req, res) => {
 
  let users = [];
  let nextPageId = "-1";
+ const limitCount = 0;
 
- while (nextPageId != 0) {
+ while (nextPageId != 0 || limitCount > 50) {
   const userDataOptions = {
    method: "GET",
    url: `https://twitter-api-v1-1-enterprise.p.rapidapi.com/base/apitools/${
@@ -91,6 +92,7 @@ app.get("/api/scrape", async (req, res) => {
   nextPageId = parsedData.next_cursor_str;
   // console.log(parsedUserData);
   console.log(parsedUserData.length);
+  limitCount++;
   users = [...users, ...parsedUserData];
  }
 
