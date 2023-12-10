@@ -5,6 +5,7 @@ const connectToDB = require("./mongodb/connect.js");
 const Op = require("./mongodb/operation.model.js");
 const User = require("./mongodb/user.model.js");
 const { sendDMs, sortUsers } = require("./lib");
+const Profile = require("./mongodb/profile.model.js");
 
 const app = express();
 app.use(express.json());
@@ -24,23 +25,53 @@ app.get("/api", (req, res) => {
 
 app.get("/api/scrape", async (req, res) => {
  const {
+  profileId,
+  userId,
   url,
   scrapeOption,
   followerRange,
   excludeBioWords,
   salesLetter,
-  tokens,
   bioIncludes,
-  userId,
   verified,
   excludeLocation,
  } = req.query;
  console.log(req.query);
 
- //  if (!url) throw new Error("no url send");
- //  if (!tokens) throw new Error("auth tokens required");
-
  await connectToDB();
+
+ const profile = await Profile.findById(profileId).select("_id authTokens");
+
+ const op = await Op.create({
+  user: userId,
+  profile: profileId,
+  usersDMed: [],
+  usersResponded: [],
+  salesLetter: salesLetter,
+  status: "PENDING",
+  tokens: profile.authTokens,
+ });
+
+ await User.findOneAndUpdate(
+  { _id: userId },
+  {
+   $push: {
+    operations: op._id,
+   },
+  }
+ );
+
+ console.log(op);
+
+ await Profile.findOneAndUpdate(
+  { _id: profileId },
+  {
+   status: "RUNNING",
+   $push: {
+    operations: op._id,
+   },
+  }
+ );
 
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
@@ -48,7 +79,7 @@ app.get("/api/scrape", async (req, res) => {
 
  let users = [];
  let nextPageId = "-1";
- const limitCount = 0;
+ let limitCount = 0;
 
  while (nextPageId != 0 || limitCount > 50) {
   const userDataOptions = {
@@ -97,32 +128,13 @@ app.get("/api/scrape", async (req, res) => {
  }
 
  console.log("users fetched: ", users.length);
- const user = await User.findById(userId).select("_id users_DMed liveUpdate");
-
- const op = await Op.create({
-  user: userId,
-  usersDMed: [],
-  usersResponded: [],
-  salesLetter: salesLetter,
-  status: "PENDING",
-  tokens,
- });
- await User.findOneAndUpdate(
-  { _id: user._id },
-  {
-   $push: {
-    operations: op._id,
-   },
-  }
- );
-
- console.log(op);
+ const user = await User.findById(userId).select("_id usersDMed liveUpdate");
 
  console.log("parsing started");
  const sortedUsers = sortUsers(users, {
   followerRange,
   bioExclude: excludeBioWords,
-  usersDMed: user.usersDmed,
+  usersDMed: user.usersDMed,
   bioIncludes,
   verified,
   excludeLocation,
@@ -145,16 +157,11 @@ app.get("/api/scrape", async (req, res) => {
 
  console.log(`Scrape initialized: ${sortedUsers.length} prospects found`);
  const currentUserId = JSON.stringify(user._id);
- await sendDMs(sortedUsers, tokens, salesLetter, op, currentUserId);
+
+ const opId = op._id.toString();
+ await sendDMs(sortedUsers, profile, salesLetter, opId, currentUserId);
 
  const totalDms = await Op.findById(op.id).select("usersDMed");
-
- await Op.findOneAndUpdate(
-  { _id: op._id },
-  {
-   status: "COMPLETED",
-  }
- );
 
  await User.findOneAndUpdate(
   { _id: user._id },
@@ -167,7 +174,23 @@ app.get("/api/scrape", async (req, res) => {
    },
   }
  );
+
+ await Op.findOneAndUpdate(
+  { _id: op._id },
+  {
+   status: "COMPLETED",
+  }
+ );
+
+ await Profile.findOneAndUpdate(
+  { _id: profileId },
+  {
+   status: "AVAILABLE",
+  }
+ );
  console.log(`Scrape done: ${totalDms.usersDMed.length} Dms sent`);
  console.log("scrape is complete");
  return;
 });
+
+app.get("/api/scrape", async (req, res) => {});

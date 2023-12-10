@@ -27,12 +27,8 @@ const UserSchema = new mongoose.Schema({
  },
  profiles: [
   {
-   userUrl: String,
-   auth_tokens: {
-    profileUrl: String,
-    auth_token: String,
-    ct0: String,
-   },
+   type: mongoose.Schema.Types.ObjectId,
+   ref: "profile",
   },
  ],
  presets: [
@@ -60,7 +56,7 @@ const UserSchema = new mongoose.Schema({
    required: true,
   },
  ],
- users_DMed: [
+ usersDMed: [
   {
    id: String,
   },

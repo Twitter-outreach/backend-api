@@ -6,6 +6,10 @@ const OperationSchema = new mongoose.Schema(
    type: mongoose.Schema.Types.ObjectId,
    ref: "user",
   },
+  profile: {
+   type: mongoose.Schema.Types.ObjectId,
+   ref: "profile",
+  },
   status: String,
   usersDMed: [
    {
