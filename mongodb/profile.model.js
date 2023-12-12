@@ -15,12 +15,17 @@ const ProfileSchema = new mongoose.Schema({
  },
  statistics: [
   {
-   date: Date,
+   date: String,
    usersDMed: [
     {
      id: String,
      name: String,
-     hasReplied: Boolean,
+    },
+   ],
+   usersResponded: [
+    {
+     id: String,
+     name: String,
     },
    ],
   },

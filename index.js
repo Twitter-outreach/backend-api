@@ -183,17 +183,19 @@ app.get("/api/scrape", async (req, res) => {
 app.get("/api/record", async (req, res) => {
  await connectToDB();
 
- const ops = await Op.find({}).populate({
-  path: "profile",
-  model: Profile,
-  select: "_id statistics authTokens",
- });
+ const profiles = await Profile.find({});
+ // .populate({
+ //  path: "profile",
+ //  model: Profile,
+ //  select: "_id statistics authTokens",
+ // });
 
  // console.log(ops);
- for (const op of ops) {
-  const profile = op.profile;
 
-  console.log(profile);
+ profiles.map(async (profile) => {
+  // const profile = op.profile;
+
+  // console.log(profile);
 
   const options = { method: "GET", headers: { accept: "*/*" } };
 
@@ -205,10 +207,11 @@ app.get("/api/record", async (req, res) => {
   const parsedDMs = JSON.parse(data.data.data);
   const dms = parsedDMs.user_events.entries;
 
-  let dmsRepliedId = [];
-  profile.statistics.forEach((day) => {
-   let DMedUsers = [];
-
+  let days = [];
+  let DMedUsers = [];
+  let userResponded = [];
+  // let dmsRepliedId = [];
+  profile.statistics.forEach(async (day) => {
    day.usersDMed.forEach((user) => {
     for (let message of dms) {
      if (
@@ -219,35 +222,58 @@ app.get("/api/record", async (req, res) => {
 
       // console.log(client);
 
-      dmsRepliedId.push({
-       id: client.sender_id,
-      });
+      // dmsRepliedId.push({
+      //  id: client.sender_id,
+      // });
 
-      DMedUsers.push({
+      userResponded.push({
        id: user.id,
        name: user.name,
-       hasReplied: true,
       });
 
       console.log("this user has replied: ", user.name);
+     } else {
+      DMedUsers.push({
+       id: user.id,
+       name: user.name,
+      });
+      // console.log("this user has replied: ", user.name);
      }
     }
    });
-   const users = day.usersDMed;
 
+   // console.log(dayData);
+
+   // const users = day.usersDMed;
    let uniqueUsers = [
     ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
    ];
 
-   uniqueUsers = uniqueUsers.map((newUser) => {
-    let index = users.findIndex((user) => user.id === newUser.id);
-    if (index !== -1) {
-     users[index] = newUser;
-    }
+   days.push({
+    date: day.date,
+    DMedUsers,
+    userResponded,
    });
 
-   console.log(uniqueUsers);
+   console.log(DMedUsers, userResponded);
+   console.log(days);
+
+   // console.log(uniqueUsers);
+   // day.usersResponded = uniqueUsers;
   });
+
+  await Profile.findByIdAndUpdate(
+   {
+    _id: profile._id,
+   },
+   {
+    statistics: days,
+   }
+  );
+  days = [];
+  DMedUsers = [];
+  userResponded = [];
+  // console.log(day);
 
   // op.usersDMed.forEach((user) => {
   //  for (let message of dms) {
@@ -273,5 +299,5 @@ app.get("/api/record", async (req, res) => {
   //    usersResponded: [...dmsRepliedId],
   //   }
   //  );
- }
+ });
 });
