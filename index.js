@@ -40,8 +40,6 @@ app.get("/api/scrape", async (req, res) => {
 
  await connectToDB();
 
- const profile = await Profile.findById(profileId).select("_id authTokens");
-
  const op = await Op.create({
   user: userId,
   profile: profileId,
@@ -49,7 +47,7 @@ app.get("/api/scrape", async (req, res) => {
   usersResponded: [],
   salesLetter: salesLetter,
   status: "PENDING",
-  tokens: profile.authTokens,
+  // tokens: profile.authTokens,
  });
 
  await User.findOneAndUpdate(
@@ -82,28 +80,16 @@ app.get("/api/scrape", async (req, res) => {
  let limitCount = 0;
 
  while (nextPageId != 0 || limitCount > 50) {
-  const userDataOptions = {
-   method: "GET",
-   url: `https://twitter-api-v1-1-enterprise.p.rapidapi.com/base/apitools/${
+  const options = { method: "GET", headers: { accept: "*/*" } };
+
+  const userData = await axios.get(
+   `https://twitter2.good6.top/api/base/apitools/${
     scrapeOption === "followers" ? "followersList" : "followingsList"
-   }`,
-   params: {
-    apiKey:
-     "2WLXZk9kacMXhHxj2cRg19bsuJ98XiQL0ndQ94kMdciuz|1574242047661207552-3jI04wPRb0tVkUfFjR4VzJW19ZnQz3",
-    screenName: username,
-    cursor: nextPageId,
-   },
-   headers: {
-    "X-RapidAPI-Key": "0b85afc0b5msh13b76112a3083e1p107698jsn711d5b3650b2",
-    "X-RapidAPI-Host": "twitter-api-v1-1-enterprise.p.rapidapi.com",
-   },
-  };
+   }?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&cursor=${nextPageId}&screenName=${username}`,
+   options
+  );
 
-  const userData = await axios.request(userDataOptions);
-  // console.log(userData.next_cursor_str);
   const parsedData = await JSON.parse(userData.data.data);
-
-  console.log(await parsedData.next_cursor_str);
 
   if (!parsedData) return;
 
@@ -121,7 +107,6 @@ app.get("/api/scrape", async (req, res) => {
   );
 
   nextPageId = parsedData.next_cursor_str;
-  // console.log(parsedUserData);
   console.log(parsedUserData.length);
   limitCount++;
   users = [...users, ...parsedUserData];
@@ -159,6 +144,8 @@ app.get("/api/scrape", async (req, res) => {
  const currentUserId = JSON.stringify(user._id);
 
  const opId = op._id.toString();
+
+ const profile = await Profile.findById(profileId).select("_id authTokens");
  await sendDMs(sortedUsers, profile, salesLetter, opId, currentUserId);
 
  const totalDms = await Op.findById(op.id).select("usersDMed");
@@ -193,4 +180,98 @@ app.get("/api/scrape", async (req, res) => {
  return;
 });
 
-app.get("/api/scrape", async (req, res) => {});
+app.get("/api/record", async (req, res) => {
+ await connectToDB();
+
+ const ops = await Op.find({}).populate({
+  path: "profile",
+  model: Profile,
+  select: "_id statistics authTokens",
+ });
+
+ // console.log(ops);
+ for (const op of ops) {
+  const profile = op.profile;
+
+  console.log(profile);
+
+  const options = { method: "GET", headers: { accept: "*/*" } };
+
+  const data = await axios.request(
+   `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}&cursor=-1`,
+   options
+  );
+
+  const parsedDMs = JSON.parse(data.data.data);
+  const dms = parsedDMs.user_events.entries;
+
+  let dmsRepliedId = [];
+  profile.statistics.forEach((day) => {
+   let DMedUsers = [];
+
+   day.usersDMed.forEach((user) => {
+    for (let message of dms) {
+     if (
+      message?.message?.message_data.sender_id &&
+      message?.message?.message_data.sender_id === user.id
+     ) {
+      let client = message.message?.message_data;
+
+      // console.log(client);
+
+      dmsRepliedId.push({
+       id: client.sender_id,
+      });
+
+      DMedUsers.push({
+       id: user.id,
+       name: user.name,
+       hasReplied: true,
+      });
+
+      console.log("this user has replied: ", user.name);
+     }
+    }
+   });
+   const users = day.usersDMed;
+
+   let uniqueUsers = [
+    ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
+   ];
+
+   uniqueUsers = uniqueUsers.map((newUser) => {
+    let index = users.findIndex((user) => user.id === newUser.id);
+    if (index !== -1) {
+     users[index] = newUser;
+    }
+   });
+
+   console.log(uniqueUsers);
+  });
+
+  // op.usersDMed.forEach((user) => {
+  //  for (let message of dms) {
+  //   if (
+  //    message?.message?.message_data.sender_id &&
+  //    message?.message?.message_data.sender_id === user.id
+  //   ) {
+  //    let client = message.message?.message_data;
+  //    console.log(client);
+  //    dmsRepliedId.push({
+  //     id: client.sender_id,
+  //    });
+  //   }
+  //  }
+  // });
+
+  //  dmsRepliedId = [...new Set(dmsRepliedId)];
+  //  console.log(dmsRepliedId);
+
+  //  await Op.findOneAndUpdate(
+  //   { _id: op._id },
+  //   {
+  //    usersResponded: [...dmsRepliedId],
+  //   }
+  //  );
+ }
+});

@@ -16,10 +16,10 @@ const OperationSchema = new mongoose.Schema(
     id: String,
    },
   ],
-  tokens: {
-   auth_token: String,
-   ct0: String,
-  },
+  // tokens: {
+  //  auth_token: String,
+  //  ct0: String,
+  // },
   usersResponded: [{ id: String }],
   salesLetter: String,
  },

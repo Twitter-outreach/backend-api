@@ -13,7 +13,18 @@ const ProfileSchema = new mongoose.Schema({
   auth_token: String,
   ct0: String,
  },
- statistics: [],
+ statistics: [
+  {
+   date: Date,
+   usersDMed: [
+    {
+     id: String,
+     name: String,
+     hasReplied: Boolean,
+    },
+   ],
+  },
+ ],
  operations: [
   {
    type: mongoose.Schema.Types.ObjectId,
