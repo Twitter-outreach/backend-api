@@ -79,7 +79,7 @@ app.get("/api/scrape", async (req, res) => {
  let nextPageId = "-1";
  let limitCount = 0;
 
- while (nextPageId != 0 || limitCount > 50) {
+ while (nextPageId != 0 || limitCount > 2500) {
   const options = { method: "GET", headers: { accept: "*/*" } };
 
   const userData = await axios.get(
