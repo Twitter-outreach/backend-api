@@ -94,14 +94,21 @@ app.get("/api/scrape", async (req, res) => {
   if (!parsedData) return;
 
   const parsedUserData = parsedData.users?.map(
-   ({ id_str, name, location, description, followers_count, verified }) => {
+   ({
+    id_str,
+    name,
+    location,
+    description,
+    followers_count,
+    is_blue_verified,
+   }) => {
     return {
      id: id_str,
      name,
      location,
      description: description.toLowerCase(),
      followers: followers_count,
-     verified,
+     verified: is_blue_verified,
     };
    }
   );
@@ -112,6 +119,7 @@ app.get("/api/scrape", async (req, res) => {
   users = [...users, ...parsedUserData];
  }
 
+ console.log("users: ", users);
  console.log("users fetched: ", users.length);
  const user = await User.findById(userId).select("_id usersDMed liveUpdate");
 
@@ -211,6 +219,7 @@ app.get("/api/record", async (req, res) => {
   let DMedUsers = [];
   let userResponded = [];
   // let dmsRepliedId = [];
+  console.log(dms);
   profile.statistics.forEach(async (day) => {
    day.usersDMed.forEach((user) => {
     for (let message of dms) {
@@ -225,6 +234,11 @@ app.get("/api/record", async (req, res) => {
       // dmsRepliedId.push({
       //  id: client.sender_id,
       // });
+
+      DMedUsers.push({
+       id: user.id,
+       name: user.name,
+      });
 
       userResponded.push({
        id: user.id,
@@ -245,22 +259,25 @@ app.get("/api/record", async (req, res) => {
    // console.log(dayData);
 
    // const users = day.usersDMed;
-   let uniqueUsers = [
+   let uniqueDMedUsers = [
     ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
+   ];
+   let uniqueDMedResponded = [
+    ...new Map(userResponded.map((user) => [user.id, user])).values(),
    ];
 
    days.push({
     date: day.date,
-    DMedUsers,
-    userResponded,
+    usersDMed: uniqueDMedUsers,
+    usersResponded: uniqueDMedResponded,
    });
 
    console.log(DMedUsers, userResponded);
-   console.log(days);
 
    // console.log(uniqueUsers);
    // day.usersResponded = uniqueUsers;
   });
+  console.log(days);
 
   await Profile.findByIdAndUpdate(
    {
