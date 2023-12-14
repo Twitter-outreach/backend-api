@@ -255,21 +255,24 @@ app.get("/api/record", async (req, res) => {
     userResponded,
    });
 
+   DMedUsers = [];
+   userResponded = [];
+
    console.log(DMedUsers, userResponded);
    console.log(days);
 
    // console.log(uniqueUsers);
    // day.usersResponded = uniqueUsers;
   });
-
-  await Profile.findByIdAndUpdate(
-   {
-    _id: profile._id,
-   },
-   {
-    statistics: days,
-   }
-  );
+  console.log(days);
+  // await Profile.findByIdAndUpdate(
+  //  {
+  //   _id: profile._id,
+  //  },
+  //  {
+  //   statistics: days,
+  //  }
+  // );
   days = [];
   DMedUsers = [];
   userResponded = [];
