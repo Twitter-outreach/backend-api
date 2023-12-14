@@ -40,36 +40,36 @@ app.get("/api/scrape", async (req, res) => {
 
  await connectToDB();
 
- const op = await Op.create({
-  user: userId,
-  profile: profileId,
-  usersDMed: [],
-  usersResponded: [],
-  salesLetter: salesLetter,
-  status: "PENDING",
-  // tokens: profile.authTokens,
- });
+ // const op = await Op.create({
+ //  user: userId,
+ //  profile: profileId,
+ //  usersDMed: [],
+ //  usersResponded: [],
+ //  salesLetter: salesLetter,
+ //  status: "PENDING",
+ //  // tokens: profile.authTokens,
+ // });
 
- await User.findOneAndUpdate(
-  { _id: userId },
-  {
-   $push: {
-    operations: op._id,
-   },
-  }
- );
+ // await User.findOneAndUpdate(
+ //  { _id: userId },
+ //  {
+ //   $push: {
+ //    operations: op._id,
+ //   },
+ //  }
+ // );
 
- console.log(op);
+ // console.log(op);
 
- await Profile.findOneAndUpdate(
-  { _id: profileId },
-  {
-   status: "RUNNING",
-   $push: {
-    operations: op._id,
-   },
-  }
- );
+ // await Profile.findOneAndUpdate(
+ //  { _id: profileId },
+ //  {
+ //   status: "RUNNING",
+ //   $push: {
+ //    operations: op._id,
+ //   },
+ //  }
+ // );
 
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
@@ -78,36 +78,99 @@ app.get("/api/scrape", async (req, res) => {
  let users = [];
  let nextPageId = "-1";
  let limitCount = 0;
+ let scrapedUserId;
 
  while (nextPageId != 0 || limitCount > 2500) {
-  const options = { method: "GET", headers: { accept: "*/*" } };
+  // const options = { method: "GET", headers: { accept: "*/*" } };
+  // if (!scrapedUserId) {
+  //  const verifiedOptions = {
+  //   method: "GET",
+  //   url: "https://twitter.utools.me/api/base/apitools/userByScreenNameV2",
+  //   params: {
+  //    apiKey:
+  //     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
+  //    screenName: username,
+  //   },
+  //   headers: { accept: "*/*" },
+  //  };
+  //  axios.request(verifiedOptions);
+  //  const scrapedUserData = await axios.request(verifiedOptions);
 
-  const userData = await axios.get(
-   `https://twitter2.good6.top/api/base/apitools/${
+  //  const parsedScrapedUserData = await JSON.parse(scrapedUserData.data.data);
+
+  //  // console.log(parsedScrapedUserData.data.user.result);
+  //  // console.log(parsedScrapedUserData.data.user.result.rest_id);
+  //  scrapedUserId = parsedScrapedUserData.data.user.result.rest_id;
+  // }
+  // let options = {};
+  // if (verified === "true") {
+  //  options = {
+  //   method: "GET",
+  //   url: "https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2",
+  //   params: {
+  //    apiKey:
+  //     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
+  //    userId: scrapedUserId,
+  //    cursor: nextPageId,
+  //   },
+  //   headers: { accept: "*/*" },
+  //  };
+
+  //  // const userData = await axios.request(options);
+
+  //  // const parsedData = await JSON.parse(userData.data);
+  // } else {
+  options = {
+   method: "GET",
+   url: `https://twitter2.good6.top/api/base/apitools/${
     scrapeOption === "followers" ? "followersList" : "followingsList"
-   }?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&cursor=${nextPageId}&screenName=${username}`,
-   options
-  );
+   }`,
+   params: {
+    apiKey:
+     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
+    cursor: nextPageId,
+    screenName: username,
+   },
+   headers: { accept: "*/*" },
+  };
 
-  const parsedData = await JSON.parse(userData.data.data);
+  // const userData = await axios.request(options);
+
+  // const parsedData = await JSON.parse(userData.data.data);
+  // }
+
+  const userData = await axios.request(options);
+
+  // console.log(userData);
+
+  let parsedData;
+  // if (verified === "true") {
+  //  const res = await JSON.parse(userData.data.data);
+  //  console.log("res log 1: ", res);
+  //  parsedData = res.data.user.result.timeline.timeline.instructions.entries;
+  //  console.log("res log 2: ", parsedData);
+  // } else {
+  parsedData = await JSON.parse(userData.data.data);
+  // }
+
+  // console.log(parsedData);
 
   if (!parsedData) return;
 
   const parsedUserData = parsedData.users?.map(
-   ({ id_str, name, location, description, followers_count, verified }) => {
+   ({ id_str, name, location, description, followers_count }) => {
     return {
      id: id_str,
      name,
      location,
      description: description.toLowerCase(),
      followers: followers_count,
-     verified,
     };
    }
   );
 
   nextPageId = parsedData.next_cursor_str;
-  console.log(parsedUserData.length);
+  console.log(parsedUserData?.length);
   limitCount++;
   users = [...users, ...parsedUserData];
  }
@@ -122,7 +185,6 @@ app.get("/api/scrape", async (req, res) => {
   bioExclude: excludeBioWords,
   usersDMed: user.usersDMed,
   bioIncludes,
-  verified,
   excludeLocation,
  });
 
