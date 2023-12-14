@@ -94,21 +94,14 @@ app.get("/api/scrape", async (req, res) => {
   if (!parsedData) return;
 
   const parsedUserData = parsedData.users?.map(
-   ({
-    id_str,
-    name,
-    location,
-    description,
-    followers_count,
-    is_blue_verified,
-   }) => {
+   ({ id_str, name, location, description, followers_count, verified }) => {
     return {
      id: id_str,
      name,
      location,
      description: description.toLowerCase(),
      followers: followers_count,
-     verified: is_blue_verified,
+     verified,
     };
    }
   );
