@@ -262,13 +262,24 @@ app.get("/api/record", async (req, res) => {
 
   const options = { method: "GET", headers: { accept: "*/*" } };
 
-  const data = await axios.request(
-   `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}&cursor=-1`,
-   options
-  );
+  let totalDms = [];
+  let nextPageId = "-1";
+  let limitCount = 0;
 
-  const parsedDMs = JSON.parse(data.data.data);
-  const dms = parsedDMs.user_events.entries;
+  while (nextPageId != 0 || limitCount > 5) {
+   const data = await axios.request(
+    `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}&cursor=${nextPageId}`,
+    options
+   );
+   const parsedDMs = await JSON.parse(data.data.data);
+   const dms = parsedDMs.user_events.entries;
+   console.log(parsedDMs);
+   nextPageId = parsedDMs.next_cursor_str;
+   console.log(nextPageId);
+   console.log(dms.length);
+   limitCount++;
+   totalDms = [...totalDms, ...dms];
+  }
 
   let days = [];
   let DMedUsers = [];
@@ -277,7 +288,7 @@ app.get("/api/record", async (req, res) => {
   console.log(dms);
   profile.statistics.forEach(async (day) => {
    day.usersDMed.forEach((user) => {
-    for (let message of dms) {
+    for (let message of totalDms) {
      if (
       message?.message?.message_data.sender_id &&
       message?.message?.message_data.sender_id === user.id
@@ -327,12 +338,14 @@ app.get("/api/record", async (req, res) => {
     usersResponded: uniqueDMedResponded,
    });
 
+   DMedUsers = [];
+   userResponded = [];
+
    console.log(DMedUsers, userResponded);
 
    // console.log(uniqueUsers);
    // day.usersResponded = uniqueUsers;
   });
-  console.log(days);
 
   await Profile.findByIdAndUpdate(
    {
@@ -346,30 +359,30 @@ app.get("/api/record", async (req, res) => {
   DMedUsers = [];
   userResponded = [];
   // console.log(day);
-
-  // op.usersDMed.forEach((user) => {
-  //  for (let message of dms) {
-  //   if (
-  //    message?.message?.message_data.sender_id &&
-  //    message?.message?.message_data.sender_id === user.id
-  //   ) {
-  //    let client = message.message?.message_data;
-  //    console.log(client);
-  //    dmsRepliedId.push({
-  //     id: client.sender_id,
-  //    });
-  //   }
-  //  }
-  // });
-
-  //  dmsRepliedId = [...new Set(dmsRepliedId)];
-  //  console.log(dmsRepliedId);
-
-  //  await Op.findOneAndUpdate(
-  //   { _id: op._id },
-  //   {
-  //    usersResponded: [...dmsRepliedId],
-  //   }
-  //  );
  });
+
+ // op.usersDMed.forEach((user) => {
+ //  for (let message of dms) {
+ //   if (
+ //    message?.message?.message_data.sender_id &&
+ //    message?.message?.message_data.sender_id === user.id
+ //   ) {
+ //    let client = message.message?.message_data;
+ //    console.log(client);
+ //    dmsRepliedId.push({
+ //     id: client.sender_id,
+ //    });
+ //   }
+ //  }
+ // });
+
+ //  dmsRepliedId = [...new Set(dmsRepliedId)];
+ //  console.log(dmsRepliedId);
+
+ //  await Op.findOneAndUpdate(
+ //   { _id: op._id },
+ //   {
+ //    usersResponded: [...dmsRepliedId],
+ //   }
+ //  );
 });

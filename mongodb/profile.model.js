@@ -13,6 +13,11 @@ const ProfileSchema = new mongoose.Schema({
   auth_token: String,
   ct0: String,
  },
+ usersDMed: [
+  {
+   id: String,
+  },
+ ],
  statistics: [
   {
    date: String,
