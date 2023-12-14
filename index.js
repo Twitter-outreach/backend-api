@@ -80,7 +80,7 @@ app.get("/api/scrape", async (req, res) => {
  let limitCount = 0;
  let scrapedUserId;
 
- while (nextPageId != 0 || limitCount > 2500) {
+ while (nextPageId != 0 || limitCount > 500) {
   // if (!scrapedUserId) {
   //  const verifiedOptions = {
   //   method: "GET",
