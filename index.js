@@ -190,7 +190,7 @@ app.get("/api/scrape", async (req, res) => {
   console.log(parsedUserData?.length);
   limitCount++;
   users = [...users, ...parsedUserData];
-  console.log(users);
+  console.log(users.length);
  }
 
  console.log("users: ", users);
