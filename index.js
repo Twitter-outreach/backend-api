@@ -40,36 +40,36 @@ app.get("/api/scrape", async (req, res) => {
 
  await connectToDB();
 
- // const op = await Op.create({
- //  user: userId,
- //  profile: profileId,
- //  usersDMed: [],
- //  usersResponded: [],
- //  salesLetter: salesLetter,
- //  status: "PENDING",
- //  // tokens: profile.authTokens,
- // });
+ const op = await Op.create({
+  user: userId,
+  profile: profileId,
+  usersDMed: [],
+  usersResponded: [],
+  salesLetter: salesLetter,
+  status: "PENDING",
+  // tokens: profile.authTokens,
+ });
 
- // await User.findOneAndUpdate(
- //  { _id: userId },
- //  {
- //   $push: {
- //    operations: op._id,
- //   },
- //  }
- // );
+ await User.findOneAndUpdate(
+  { _id: userId },
+  {
+   $push: {
+    operations: op._id,
+   },
+  }
+ );
 
- // console.log(op);
+ console.log(op);
 
- // await Profile.findOneAndUpdate(
- //  { _id: profileId },
- //  {
- //   status: "RUNNING",
- //   $push: {
- //    operations: op._id,
- //   },
- //  }
- // );
+ await Profile.findOneAndUpdate(
+  { _id: profileId },
+  {
+   status: "RUNNING",
+   $push: {
+    operations: op._id,
+   },
+  }
+ );
 
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
@@ -81,7 +81,6 @@ app.get("/api/scrape", async (req, res) => {
  let scrapedUserId;
 
  while (nextPageId != 0 || limitCount > 2500) {
-  // const options = { method: "GET", headers: { accept: "*/*" } };
   // if (!scrapedUserId) {
   //  const verifiedOptions = {
   //   method: "GET",
@@ -99,7 +98,7 @@ app.get("/api/scrape", async (req, res) => {
   //  const parsedScrapedUserData = await JSON.parse(scrapedUserData.data.data);
 
   //  // console.log(parsedScrapedUserData.data.user.result);
-  //  // console.log(parsedScrapedUserData.data.user.result.rest_id);
+  //  console.log(parsedScrapedUserData.data.user.result.rest_id);
   //  scrapedUserId = parsedScrapedUserData.data.user.result.rest_id;
   // }
   // let options = {};
@@ -116,9 +115,9 @@ app.get("/api/scrape", async (req, res) => {
   //   headers: { accept: "*/*" },
   //  };
 
-  //  // const userData = await axios.request(options);
+  // const userData = await axios.request(options);
 
-  //  // const parsedData = await JSON.parse(userData.data);
+  // const parsedData = await JSON.parse(userData.data);
   // } else {
   options = {
    method: "GET",
@@ -146,18 +145,34 @@ app.get("/api/scrape", async (req, res) => {
   let parsedData;
   // if (verified === "true") {
   //  const res = await JSON.parse(userData.data.data);
-  //  console.log("res log 1: ", res);
-  //  parsedData = res.data.user.result.timeline.timeline.instructions.entries;
-  //  console.log("res log 2: ", parsedData);
+  //  // console.log("res log 1: ", res);
+  //  // parsedData = res.data.user.result.timeline.timeline.instructions.entries;
+  //  parsedData = res.data.user.result.timeline.timeline.instructions[3].entries;
+  //  // console.log("res log 2: ", parsedData);
   // } else {
   parsedData = await JSON.parse(userData.data.data);
   // }
 
-  // console.log(parsedData);
-
   if (!parsedData) return;
 
-  const parsedUserData = parsedData.users?.map(
+  let parsedUserData;
+  // if (verified === "true") {
+  //  parsedUserData = parsedData.map((user) => {
+  //   if (user?.content?.clientEventInfo) {
+  //    // console.log(user.content.itemContent?.user_results?.result);
+  //    const u = user.content.itemContent.user_results.result.legacy;
+
+  //    return {
+  //     id: user.content.itemContent.user_results.result.rest_id,
+  //     name: u.name,
+  //     location: u.location,
+  //     description: u.description.toLowerCase(),
+  //     followers: u.followers_count,
+  //    };
+  //   }
+  //  });
+  // } else {
+  parsedData.users?.map(
    ({ id_str, name, location, description, followers_count }) => {
     return {
      id: id_str,
@@ -168,11 +183,14 @@ app.get("/api/scrape", async (req, res) => {
     };
    }
   );
-
+  // }
+  // console.log(parsedData[parsedData.length - 1]);
+  // nextPageId = parsedData[parsedData.length - 1].content.value;
   nextPageId = parsedData.next_cursor_str;
   console.log(parsedUserData?.length);
   limitCount++;
   users = [...users, ...parsedUserData];
+  console.log(users);
  }
 
  console.log("users: ", users);
