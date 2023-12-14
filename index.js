@@ -169,10 +169,10 @@ app.get("/api/scrape", async (req, res) => {
   //     description: u.description.toLowerCase(),
   //     followers: u.followers_count,
   //    };
-  //   }
+  //   } 
   //  });
   // } else {
-  parsedData.users?.map(
+  parsedUserData = parsedData.users?.map(
    ({ id_str, name, location, description, followers_count }) => {
     return {
      id: id_str,
