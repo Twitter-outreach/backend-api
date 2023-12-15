@@ -47,29 +47,28 @@ app.get("/api/scrape", async (req, res) => {
   usersResponded: [],
   salesLetter: salesLetter,
   status: "PENDING",
-  // tokens: profile.authTokens,
  });
 
- // await User.findOneAndUpdate(
- //  { _id: userId },
- //  {
- //   $push: {
- //    operations: op._id,
- //   },
- //  }
- // );
+ await User.findOneAndUpdate(
+  { _id: userId },
+  {
+   $push: {
+    operations: op._id,
+   },
+  }
+ );
 
- // console.log(op);
+ console.log(op);
 
- // await Profile.findOneAndUpdate(
- //  { _id: profileId },
- //  {
- //   status: "RUNNING",
- //   $push: {
- //    operations: op._id,
- //   },
- //  }
- // );
+ await Profile.findOneAndUpdate(
+  { _id: profileId },
+  {
+   status: "RUNNING",
+   $push: {
+    operations: op._id,
+   },
+  }
+ );
 
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
