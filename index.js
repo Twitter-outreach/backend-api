@@ -149,10 +149,7 @@ app.get("/api/scrape", async (req, res) => {
   console.log(parsedUserData?.length);
   limitCount++;
 
-  // users = [...users, ...parsedUserData];
   users = [...parsedUserData];
-
-  // console.log("users: ", users);
 
   console.log("users fetched: ", users.length);
   console.log("parsing...");
@@ -165,12 +162,8 @@ app.get("/api/scrape", async (req, res) => {
    excludeLocation,
   });
 
-  // console.log(sortedUsers);
   console.log("found prospects: ", sortedUsers.length);
 
-  // Send dms to those found people
-
-  // console.log(`Scrape initialized: Parsing thru`);
   const currentUserId = JSON.stringify(user._id);
   const opId = op._id.toString();
 
