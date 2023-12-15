@@ -87,6 +87,7 @@ app.get("/api/scrape", async (req, res) => {
  const profileData = await Profile.findById(profileId).select("_id authTokens");
 
  console.log(profileData);
+ const opId = op._id.toString();
 
  while (nextPageId != 0 || limitCount > 500) {
   const op = await Op.findById(opId).select("_id status");
@@ -99,7 +100,7 @@ app.get("/api/scrape", async (req, res) => {
 
   if (op.status === "TERMINATED") {
    await Profile.findOneAndUpdate(
-    { _id: profile._id },
+    { _id: profileData._id },
     {
      $push: {
       statistics: {
@@ -165,7 +166,6 @@ app.get("/api/scrape", async (req, res) => {
   console.log("found prospects: ", sortedUsers.length);
 
   const currentUserId = JSON.stringify(user._id);
-  const opId = op._id.toString();
 
   await sendDMs(
    sortedUsers,
