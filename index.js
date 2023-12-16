@@ -84,7 +84,9 @@ app.get("/api/scrape", async (req, res) => {
  let usersDMedToday = [];
 
  const user = await User.findById(userId).select("_id usersDMed liveUpdate");
- const profileData = await Profile.findById(profileId).select("_id authTokens");
+ const profileData = await Profile.findById(profileId).select(
+  "_id authTokens usersDMed"
+ );
 
  console.log(profileData);
  const opId = op._id.toString();
@@ -158,7 +160,7 @@ app.get("/api/scrape", async (req, res) => {
   const sortedUsers = sortUsers(users, {
    followerRange,
    bioExclude: excludeBioWords,
-   usersDMed: user.usersDMed,
+   usersDMed: profileData.usersDMed,
    bioIncludes,
    excludeLocation,
   });
@@ -257,35 +259,23 @@ app.get("/api/record", async (req, res) => {
  const profiles = await Profile.find({});
 
  profiles.map(async (profile) => {
+  console.log(profile);
   const options = { method: "GET", headers: { accept: "*/*" } };
 
-  let totalDms = [];
-  let nextPageId = "-1";
-  let limitCount = 0;
-
-  while (nextPageId != 0 || limitCount > 5) {
-   const data = await axios.request(
-    `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}&cursor=${nextPageId}`,
-    options
-   );
-   const parsedDMs = await JSON.parse(data.data.data);
-   const dms = parsedDMs.user_events.entries;
-   console.log(parsedDMs);
-   nextPageId = parsedDMs.next_cursor_str;
-   console.log(nextPageId);
-   console.log(dms.length);
-   limitCount++;
-   totalDms = [...totalDms, ...dms];
-  }
+  const data = await axios.request(
+   `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}`,
+   options
+  );
+  const parsedDMs = await JSON.parse(data.data.data);
+  const dms = parsedDMs.user_events.entries;
 
   let days = [];
   let DMedUsers = [];
   let userResponded = [];
-  // let dmsRepliedId = [];
-  console.log(dms);
+
   profile.statistics.forEach(async (day) => {
    day.usersDMed.forEach((user) => {
-    for (let message of totalDms) {
+    for (let message of dms) {
      if (
       message?.message?.message_data.sender_id &&
       message?.message?.message_data.sender_id === user.id
@@ -334,17 +324,67 @@ app.get("/api/record", async (req, res) => {
    DMedUsers = [];
    userResponded = [];
 
-   console.log(DMedUsers, userResponded);
+   // console.log(DMedUsers, userResponded);
   });
+
+  // console.log(days);
+  let mergedData = {};
+
+  // Iterate over the array of objects using the reduce function
+  days.reduce((acc, obj) => {
+   // Check if the date already exists in the accumulator object
+   if (!acc[obj.date]) {
+    // If it doesn't, create a new entry in the accumulator object
+    acc[obj.date] = {
+     date: obj.date,
+     usersDMed: [],
+     usersResponded: [],
+    };
+   }
+
+   // Create a Set to store the ids of the usersDMed and usersResponded arrays
+   let userDMedSet = new Set(acc[obj.date].usersDMed.map((user) => user.id));
+   let userRespondedSet = new Set(
+    acc[obj.date].usersResponded.map((user) => user.id)
+   );
+
+   // Iterate over the usersDMed array
+   obj.usersDMed.forEach((user) => {
+    // Check if the user's id is already in the Set
+    if (!userDMedSet.has(user.id)) {
+     // If it isn't, push the user to the array and add the id to the Set
+     acc[obj.date].usersDMed.push(user);
+     userDMedSet.add(user.id);
+    }
+   });
+
+   // Do the same for the usersResponded array
+   obj.usersResponded.forEach((user) => {
+    if (!userRespondedSet.has(user.id)) {
+     acc[obj.date].usersResponded.push(user);
+     userRespondedSet.add(user.id);
+    }
+   });
+
+   // Return the accumulator object to be used in the next iteration
+   return acc;
+  }, mergedData);
+
+  // Convert the mergedData object back to an array
+  let mergedArray = Object.values(mergedData);
+
+  console.log("full stats for: ", profile.name, mergedArray);
 
   await Profile.findByIdAndUpdate(
    {
     _id: profile._id,
    },
    {
-    statistics: days,
+    statistics: mergedArray,
    }
   );
+
+  mergedData = {};
   days = [];
   DMedUsers = [];
   userResponded = [];
