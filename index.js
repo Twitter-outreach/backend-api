@@ -70,6 +70,10 @@ app.get("/api/scrape", async (req, res) => {
   }
  );
 
+ res.send({ message: "scrape in progress!" });
+
+ console.log("scrape in progress");
+
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
  const username = parts[1];
@@ -98,7 +102,6 @@ app.get("/api/scrape", async (req, res) => {
   let month = dateObj.getMonth() + 1; // months from 1-12
   let year = dateObj.getFullYear();
   let currentDate = day + "/" + month + "/" + year;
-  console.log(currentDate);
 
   if (op.status === "TERMINATED") {
    await Profile.findOneAndUpdate(
@@ -188,22 +191,20 @@ app.get("/api/scrape", async (req, res) => {
  let year = dateObj.getFullYear();
  let currentDate = day + "/" + month + "/" + year;
 
- await Profile.findOneAndUpdate(
-  { _id: profileData._id },
-  {
-   $push: {
-    statistics: {
-     date: currentDate,
-     usersDMed: usersDMedToday,
-     usersResponded: [],
-    },
-   },
-  }
- );
+ // await Profile.findOneAndUpdate(
+ //  { _id: profileData._id },
+ //  {
+ //   $push: {
+ //    statistics: {
+ //     date: currentDate,
+ //     usersDMed: usersDMedToday,
+ //     usersResponded: [],
+ //    },
+ //   },
+ //  }
+ // );
 
  const opData = await Op.findById(opId).select("_id status");
-
- console.log(currentDate);
 
  if (opData.status === "PENDING") {
   await Profile.findOneAndUpdate(
