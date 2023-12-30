@@ -81,16 +81,39 @@ app.get("/api/scrape", async (req, res) => {
  let users = [];
  let nextPageId = "-1";
  let limitCount = 0;
- let scrapedUserId;
+ // let scrapedUserId;
 
  let sentDMs = 0;
  let totalDMsSent = 0;
  let usersDMedToday = [];
 
- const user = await User.findById(userId).select("_id usersDMed liveUpdate");
+ const user = await User.findById(userId).select("_id usersDMed paymentInfo");
  const profileData = await Profile.findById(profileId).select(
   "_id authTokens usersDMed"
  );
+
+ const paymentInfo = user.paymentInfo;
+ console.log(paymentInfo);
+
+ let maxDMsPerDay = 0;
+
+ switch (paymentInfo.plan) {
+  case "price_1ONGFBH5JVWNW8rNbhrFdjii":
+   // Execute code for basic plan
+   maxDMsPerDay = 70;
+   break;
+  case "price_1ONGFZH5JVWNW8rNnAzGFJNj":
+   // Execute code for standard plan
+   maxDMsPerDay = 200;
+   break;
+  case "price_1ONGFtH5JVWNW8rNL5jDetrl":
+   // Execute code for premium plan
+   maxDMsPerDay = 500;
+   break;
+  default:
+   console.log("User does not have any of the available plans");
+   return;
+ }
 
  console.log(profileData);
  const opId = op._id.toString();
@@ -117,7 +140,8 @@ app.get("/api/scrape", async (req, res) => {
     }
    );
 
-   console.log("SCRAPE TERMINATED");
+   console.log("TERMINATED");
+   console.log("STATS RECORDED");
    return;
   }
   options = {
@@ -180,6 +204,7 @@ app.get("/api/scrape", async (req, res) => {
    currentUserId,
    sentDMs,
    totalDMsSent,
+   maxDMsPerDay,
    usersDMedToday
   );
 
@@ -249,7 +274,7 @@ app.get("/api/scrape", async (req, res) => {
    status: "AVAILABLE",
   }
  );
- console.log(`Scrape done: ${totalDms.usersDMed.length} Dms sent`);
+
  console.log("scrape is complete");
  return;
 });

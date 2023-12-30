@@ -16,12 +16,11 @@ const UserSchema = new mongoose.Schema({
    default: "none",
   },
   startDate: {
-   type: Date,
+   type: String,
    default: Date.now(),
-   required: true,
   },
   endDate: {
-   type: Date,
+   type: String,
    default: Date.now(),
   },
  },
