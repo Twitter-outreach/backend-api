@@ -142,7 +142,7 @@ app.get("/api/scrape", async (req, res) => {
 
    console.log("TERMINATED");
    console.log("STATS RECORDED");
-   return;
+   break;
   }
   options = {
    method: "GET",
