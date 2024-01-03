@@ -338,7 +338,9 @@ app.get("/api/record", async (req, res) => {
     ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
    ];
    let uniqueDMedResponded = [
-    ...new Map(userResponded.map((user) => [user.id, user])).values(),
+    ...new Map(
+     [...userResponded, ...day.userResponded].map((user) => [user.id, user])
+    ).values(),
    ];
 
    days.push({
