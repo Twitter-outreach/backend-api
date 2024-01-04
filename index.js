@@ -87,7 +87,7 @@ app.get("/api/scrape", async (req, res) => {
  let totalDMsSent = 0;
  let usersDMedToday = [];
 
- const user = await User.findById(userId).select("_id usersDMed paymentInfo");
+ const user = await User.findById(userId).select("_id paymentInfo");
  const profileData = await Profile.findById(profileId).select(
   "_id authTokens usersDMed"
  );
@@ -169,7 +169,7 @@ app.get("/api/scrape", async (req, res) => {
     return {
      id: id_str,
      name,
-     location,
+     location: location.toLowerCase(),
      description: description.toLowerCase(),
      followers: followers_count,
     };
