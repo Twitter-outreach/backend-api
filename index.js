@@ -216,19 +216,6 @@ app.get("/api/scrape", async (req, res) => {
  let year = dateObj.getFullYear();
  let currentDate = day + "/" + month + "/" + year;
 
- // await Profile.findOneAndUpdate(
- //  { _id: profileData._id },
- //  {
- //   $push: {
- //    statistics: {
- //     date: currentDate,
- //     usersDMed: usersDMedToday,
- //     usersResponded: [],
- //    },
- //   },
- //  }
- // );
-
  const opData = await Op.findById(opId).select("_id status");
 
  if (opData.status === "PENDING") {
