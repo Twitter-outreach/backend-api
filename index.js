@@ -59,7 +59,7 @@ app.get("/api/scrape", async (req, res) => {
        const cursorValue = content.value;
        console.log(`index: ${j}, cursor = ${cursorValue}`);
 
-       if (cursorValue.includes("0|")) {
+       if (cursorValue === "0|") {
         return;
        }
 
@@ -232,8 +232,8 @@ app.get("/api/scrape", async (req, res) => {
    console.log("STATS RECORDED");
    break;
   }
-  let parsedUserData;
 
+  let parsedUserData;
 
   if (verified === "true") {
    const options = { method: "GET", headers: { accept: "*/*" } };
@@ -244,7 +244,7 @@ app.get("/api/scrape", async (req, res) => {
    );
    const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
 
-   console.log('parsed stuff', parsedScrapeUserData);
+   console.log("parsed stuff", parsedScrapeUserData);
    //
    const apiKey =
     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
