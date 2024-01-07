@@ -24,6 +24,94 @@ app.get("/api", (req, res) => {
 });
 
 app.get("/api/scrape", async (req, res) => {
+ let userData = [];
+ /*
+  * Recursively obtain blue authenticated users
+  */
+ async function getAllBlueFollowers(apiKey, userId, cursor) {
+  try {
+   const jsonStr = await getListByUserId(apiKey, userId, cursor);
+
+   const jsonObject = JSON.parse(jsonStr.data);
+
+   const instructions =
+    jsonObject.data.user.result.timeline.timeline.instructions;
+
+   for (let i = 0; i < instructions.length; i++) {
+    const instruction = instructions[i];
+
+    if (instruction.type === "TimelineAddEntries") {
+     const userArrays = instruction.entries;
+
+     for (let j = 0; j < userArrays.length; j++) {
+      const content = userArrays[j].content;
+
+      if (content.entryType === "TimelineTimelineItem") {
+       const userJson = content.itemContent.user_results.result;
+
+       console.log(userJson);
+       userData.push(userJson);
+       console.log(`index: ${j}, userResults = ${JSON.stringify(userJson)}`);
+      } else if (
+       content.entryType === "TimelineTimelineCursor" &&
+       content.cursorType === "Bottom"
+      ) {
+       const cursorValue = content.value;
+       console.log(`index: ${j}, cursor = ${cursorValue}`);
+
+       if (cursorValue.includes("0|")) {
+        return;
+       }
+
+       await new Promise((resolve) => setTimeout(resolve, 500));
+       await getAllBlueFollowers(apiKey, userId, cursorValue);
+      }
+     }
+    }
+   }
+  } catch (error) {
+   console.error(error);
+  }
+ }
+
+ /*
+  * This method calls the v2 followers blue endpoint by user ID
+  */
+ async function getListByUserId(apiKey, userId, cursor) {
+  const url = `https://twitter.utools.me/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
+   apiKey
+  )}&cursor=${encodeURIComponent(cursor)}&userId=${userId}`;
+
+  try {
+   const response = await axios.get(url, {
+    headers: {
+     accept: "*/*",
+    },
+   });
+
+   const body = response.data;
+
+   // Record counts for future limiting
+   const headers = response.headers;
+   for (const headerName of Object.keys(headers)) {
+    if (headerName.toLowerCase().includes("limit")) {
+     const headerValue = headers[headerName];
+    }
+   }
+
+   if (response.status === 429) {
+    return "1";
+   }
+
+   return body;
+  } catch (error) {
+   console.error(error);
+   return "0";
+  }
+ }
+
+ // Example usage
+
  const {
   profileId,
   userId,
@@ -72,7 +160,7 @@ app.get("/api/scrape", async (req, res) => {
 
  res.send({ message: "scrape in progress!" });
 
- console.log("scrape in progress");
+ //  console.log("scrape in progress");
 
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
@@ -115,7 +203,7 @@ app.get("/api/scrape", async (req, res) => {
    return;
  }
 
- console.log(profileData);
+ //  console.log(profileData);
  const opId = op._id.toString();
 
  while (nextPageId != 0 || limitCount > 500) {
@@ -144,47 +232,70 @@ app.get("/api/scrape", async (req, res) => {
    console.log("STATS RECORDED");
    break;
   }
-  options = {
-   method: "GET",
-   url: `https://twitter2.good6.top/api/base/apitools/${
-    scrapeOption === "followers" ? "followersList" : "followingsList"
-   }`,
-   params: {
-    apiKey:
-     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
-    cursor: nextPageId,
-    screenName: username,
-   },
-   headers: { accept: "*/*" },
-  };
 
-  const userData = await axios.request(options);
+  if (verified === "true") {
+   //
+   const apiKey =
+    "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
+   const userId = "1539340831986966534";
+   await getAllBlueFollowers(apiKey, userId, "-1");
 
-  const parsedData = await JSON.parse(userData.data.data);
-
-  if (!parsedData) return;
-
-  const parsedUserData = parsedData.users?.map(
-   ({ id_str, name, location, description, followers_count }) => {
+   const parsedUserData = userData?.map(({ rest_id, legacy }) => {
     return {
-     id: id_str,
-     name,
-     location: location.toLowerCase(),
-     description: description.toLowerCase(),
-     followers: followers_count,
+     id: rest_id,
+     name: legacy.name,
+     location: legacy.location.toLowerCase(),
+     description: legacy.description.toLowerCase(),
+     followers: legacy.followers_count,
     };
-   }
-  );
-  nextPageId = parsedData.next_cursor_str;
-  console.log(parsedUserData?.length);
+   });
+
+   console.log("end users.", parsedUserData);
+   console.log("end users.length", parsedUserData.length);
+
+   nextPageId = 0
+   //
+  } else {
+   const options = {
+    method: "GET",
+    url: `https://twitter2.good6.top/api/base/apitools/${
+     scrapeOption === "followers" ? "followersList" : "followingsList"
+    }`,
+    params: {
+     apiKey:
+      "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
+     cursor: nextPageId,
+     screenName: username,
+    },
+    headers: { accept: "*/*" },
+   };
+
+   const userData = await axios.request(options);
+   const parsedData = await JSON.parse(userData.data.data);
+   if (!parsedData) return;
+   const parsedUserData = parsedData.users?.map(
+    ({ id_str, name, location, description, followers_count }) => {
+     return {
+      id: id_str,
+      name,
+      location: location.toLowerCase(),
+      description: description.toLowerCase(),
+      followers: followers_count,
+     };
+    }
+   );
+   nextPageId = parsedData.next_cursor_str;
+   console.log(parsedUserData?.length);
+  }
+
   limitCount++;
 
-  users = [...parsedUserData];
+  // users = [...parsedUserData];
 
   console.log("users fetched: ", users.length);
   console.log("parsing...");
 
-  const sortedUsers = sortUsers(users, {
+  const sortedUsers = sortUsers(parsedUserData, {
    followerRange,
    bioExclude: excludeBioWords,
    usersDMed: profileData.usersDMed,
