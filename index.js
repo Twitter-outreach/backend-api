@@ -232,15 +232,27 @@ app.get("/api/scrape", async (req, res) => {
    console.log("STATS RECORDED");
    break;
   }
+  let parsedUserData;
+
 
   if (verified === "true") {
+   const options = { method: "GET", headers: { accept: "*/*" } };
+
+   const scrapeUserData = await axios.request(
+    `https://twitter.utools.me/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${username}`,
+    options
+   );
+   const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
+
+   console.log('parsed stuff', parsedScrapeUserData);
    //
    const apiKey =
     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
-   const userId = "1539340831986966534";
+
+   const userId = parsedScrapeUserData[0].id_str;
    await getAllBlueFollowers(apiKey, userId, "-1");
 
-   const parsedUserData = userData?.map(({ rest_id, legacy }) => {
+   parsedUserData = userData?.map(({ rest_id, legacy }) => {
     return {
      id: rest_id,
      name: legacy.name,
@@ -253,7 +265,7 @@ app.get("/api/scrape", async (req, res) => {
    console.log("end users.", parsedUserData);
    console.log("end users.length", parsedUserData.length);
 
-   nextPageId = 0
+   nextPageId = 0;
    //
   } else {
    const options = {
@@ -273,7 +285,7 @@ app.get("/api/scrape", async (req, res) => {
    const userData = await axios.request(options);
    const parsedData = await JSON.parse(userData.data.data);
    if (!parsedData) return;
-   const parsedUserData = parsedData.users?.map(
+   parsedUserData = parsedData.users?.map(
     ({ id_str, name, location, description, followers_count }) => {
      return {
       id: id_str,
@@ -290,7 +302,7 @@ app.get("/api/scrape", async (req, res) => {
 
   limitCount++;
 
-  // users = [...parsedUserData];
+  users = [...parsedUserData];
 
   console.log("users fetched: ", users.length);
   console.log("parsing...");
