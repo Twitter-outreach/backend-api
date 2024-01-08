@@ -183,7 +183,13 @@ app.get("/api/scrape", async (req, res) => {
 app.get("/api/record", async (req, res) => {
  await connectToDB();
 
- const profiles = await Profile.find({});
+ const profiles = await Profile.find({}).populate({
+  path: "operations",
+  model: Op,
+ });
+
+ console.log(profiles);
+ //  const Ops = await Op.find({});
  // .populate({
  //  path: "profile",
  //  model: Profile,
@@ -217,6 +223,9 @@ app.get("/api/record", async (req, res) => {
    limitCount++;
    totalDms = [...totalDms, ...dms];
   }
+
+  console.log(totalDms);
+  console.log(totalDms.length);
 
   let days = [];
   let DMedUsers = [];
@@ -288,30 +297,31 @@ app.get("/api/record", async (req, res) => {
   DMedUsers = [];
   userResponded = [];
   // console.log(day);
+  for (let op of profile.operations) {
+   op.usersDMed.forEach((user) => {
+    for (let message of dms) {
+     if (
+      message?.message?.message_data.sender_id &&
+      message?.message?.message_data.sender_id === user.id
+     ) {
+      let client = message.message?.message_data;
+      console.log(client);
+      dmsRepliedId.push({
+       id: client.sender_id,
+      });
+     }
+    }
+   });
+
+   dmsRepliedId = [...new Set(dmsRepliedId)];
+   console.log(dmsRepliedId);
+
+   await Op.findOneAndUpdate(
+    { _id: op._id },
+    {
+     usersResponded: [...dmsRepliedId],
+    }
+   );
+  }
  });
-
- // op.usersDMed.forEach((user) => {
- //  for (let message of dms) {
- //   if (
- //    message?.message?.message_data.sender_id &&
- //    message?.message?.message_data.sender_id === user.id
- //   ) {
- //    let client = message.message?.message_data;
- //    console.log(client);
- //    dmsRepliedId.push({
- //     id: client.sender_id,
- //    });
- //   }
- //  }
- // });
-
- //  dmsRepliedId = [...new Set(dmsRepliedId)];
- //  console.log(dmsRepliedId);
-
- //  await Op.findOneAndUpdate(
- //   { _id: op._id },
- //   {
- //    usersResponded: [...dmsRepliedId],
- //   }
- //  );
 });
