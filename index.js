@@ -49,9 +49,8 @@ app.get("/api/scrape", async (req, res) => {
       if (content.entryType === "TimelineTimelineItem") {
        const userJson = content.itemContent.user_results.result;
 
-       console.log(userJson);
        userData.push(userJson);
-       console.log(`index: ${j}, userResults = ${JSON.stringify(userJson)}`);
+       console.log(userData.length);
       } else if (
        content.entryType === "TimelineTimelineCursor" &&
        content.cursorType === "Bottom"
@@ -59,7 +58,7 @@ app.get("/api/scrape", async (req, res) => {
        const cursorValue = content.value;
        console.log(`index: ${j}, cursor = ${cursorValue}`);
 
-       if (cursorValue === "0|") {
+       if (cursorValue.startsWith("0|")) {
         return;
        }
 
@@ -162,8 +161,6 @@ app.get("/api/scrape", async (req, res) => {
 
  res.send({ message: "scrape in progress!" });
 
- //  console.log("scrape in progress");
-
  const user_url = new URL(url);
  const parts = user_url.pathname.split("/");
  const username = parts[1];
@@ -183,7 +180,6 @@ app.get("/api/scrape", async (req, res) => {
  );
 
  const paymentInfo = user.paymentInfo;
- console.log(paymentInfo);
 
  let maxDMsPerDay = 0;
 
@@ -401,7 +397,7 @@ app.get("/api/record", async (req, res) => {
   const options = { method: "GET", headers: { accept: "*/*" } };
 
   const data = await axios.request(
-   `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}`,
+   `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}`,
    options
   );
   const parsedDMs = await JSON.parse(data.data.data);
