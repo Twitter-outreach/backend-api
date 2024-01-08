@@ -390,139 +390,183 @@ app.get("/api/scrape", async (req, res) => {
 app.get("/api/record", async (req, res) => {
  await connectToDB();
 
- const profiles = await Profile.find({});
+ const profiles = await Profile.find({})
+  .select("_id authTokens statistics user name")
+  .populate({
+   path: "operations",
+   model: Op,
+   select: "_id usersDMed usersResponded",
+  });
 
- profiles.map(async (profile) => {
-  console.log(profile);
+ for (let profile of profiles) {
+  if (!profile) return;
+  if (!profile.authTokens) return;
+
+  console.log("current profile", profile);
   const options = { method: "GET", headers: { accept: "*/*" } };
 
-  const data = await axios.request(
-   `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profile.authTokens.auth_token}&ct0=${profile.authTokens.ct0}`,
-   options
-  );
-  const parsedDMs = await JSON.parse(data.data.data);
-  const dms = parsedDMs.user_events.entries;
+  try {
+   const data = await axios.request(
+    `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${encodeURIComponent(
+     profile.authTokens.auth_token
+    )}&ct0=${encodeURIComponent(profile.authTokens.ct0)}&cursor=-1`,
+    options
+   );
 
-  let days = [];
-  let DMedUsers = [];
-  let userResponded = [];
+   if (data.data.data === "Forbidden") return;
+   console.log(data.data);
+   console.log("profile", profile);
 
-  profile.statistics.forEach(async (day) => {
-   day.usersDMed.forEach((user) => {
-    for (let message of dms) {
-     if (
-      message?.message?.message_data.sender_id &&
-      message?.message?.message_data.sender_id === user.id
-     ) {
-      let client = message.message?.message_data;
+   const parsedDMs = await JSON.parse(data.data.data);
+   const dms = parsedDMs.user_events.entries;
 
-      // console.log(client);
+   let days = [];
+   let DMedUsers = [];
+   let userResponded = [];
 
-      // dmsRepliedId.push({
-      //  id: client.sender_id,
-      // });
+   profile.statistics.forEach(async (day) => {
+    day.usersDMed.forEach((user) => {
+     for (let message of dms) {
+      if (
+       message?.message?.message_data.sender_id &&
+       message?.message?.message_data.sender_id === user.id
+      ) {
+       let client = message.message?.message_data;
 
-      DMedUsers.push({
-       id: user.id,
-       name: user.name,
-      });
+       console.log("has replies", client);
 
-      userResponded.push({
-       id: user.id,
-       name: user.name,
-      });
+       DMedUsers.push({
+        id: user.id,
+        name: user.name,
+       });
 
-      console.log("this user has replied: ", user.name);
-     } else {
-      DMedUsers.push({
-       id: user.id,
-       name: user.name,
-      });
+       userResponded.push({
+        id: user.id,
+        name: user.name,
+       });
+
+       console.log("this user has replied: ", user.name);
+      } else {
+       DMedUsers.push({
+        id: user.id,
+        name: user.name,
+       });
+      }
      }
+    });
+
+    let uniqueDMedUsers = [
+     ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
+    ];
+    let uniqueDMedResponded = [
+     ...new Map(
+      [...userResponded, ...day.userResponded].map((user) => [user.id, user])
+     ).values(),
+    ];
+
+    days.push({
+     date: day.date,
+     usersDMed: uniqueDMedUsers,
+     usersResponded: uniqueDMedResponded,
+    });
+
+    DMedUsers = [];
+    userResponded = [];
+
+    // console.log(DMedUsers, userResponded);
+   });
+
+   console.log(days);
+   let mergedData = {};
+
+   days.reduce((acc, obj) => {
+    if (!acc[obj.date]) {
+     acc[obj.date] = {
+      date: obj.date,
+      usersDMed: [],
+      usersResponded: [],
+     };
     }
-   });
 
-   let uniqueDMedUsers = [
-    ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
-   ];
-   let uniqueDMedResponded = [
-    ...new Map(
-     [...userResponded, ...day.userResponded].map((user) => [user.id, user])
-    ).values(),
-   ];
+    // Create a Set to store the ids of the usersDMed and usersResponded arrays
+    let userDMedSet = new Set(acc[obj.date].usersDMed.map((user) => user.id));
+    let userRespondedSet = new Set(
+     acc[obj.date].usersResponded.map((user) => user.id)
+    );
 
-   days.push({
-    date: day.date,
-    usersDMed: uniqueDMedUsers,
-    usersResponded: uniqueDMedResponded,
-   });
+    // Iterate over the usersDMed array
+    obj.usersDMed.forEach((user) => {
+     // Check if the user's id is already in the Set
+     if (!userDMedSet.has(user.id)) {
+      // If it isn't, push the user to the array and add the id to the Set
+      acc[obj.date].usersDMed.push(user);
+      userDMedSet.add(user.id);
+     }
+    });
 
+    // Do the same for the usersResponded array
+    obj.usersResponded.forEach((user) => {
+     if (!userRespondedSet.has(user.id)) {
+      acc[obj.date].usersResponded.push(user);
+      userRespondedSet.add(user.id);
+     }
+    });
+
+    // Return the accumulator object to be used in the next iteration
+    return acc;
+   }, mergedData);
+
+   // Convert the mergedData object back to an array
+   let mergedArray = Object.values(mergedData);
+
+   console.log("full stats for: ", profile.name, mergedArray);
+
+   await Profile.findByIdAndUpdate(
+    {
+     _id: profile._id,
+    },
+    {
+     statistics: mergedArray,
+    }
+   );
+
+   mergedData = {};
+   days = [];
    DMedUsers = [];
    userResponded = [];
 
-   // console.log(DMedUsers, userResponded);
-  });
+   let dmsRepliedId = []
 
-  // console.log(days);
-  let mergedData = {};
+   for (let op of profile.operations) {
+    op.usersDMed.forEach((user) => {
+     for (let message of dms) {
+      if (
+       message?.message?.message_data.sender_id &&
+       message?.message?.message_data.sender_id === user.id
+      ) {
+       let client = message.message?.message_data;
+       console.log(client);
+       dmsRepliedId.push({
+        id: client.sender_id,
+       });
+      }
+     }
+    });
 
-  // Iterate over the array of objects using the reduce function
-  days.reduce((acc, obj) => {
-   // Check if the date already exists in the accumulator object
-   if (!acc[obj.date]) {
-    // If it doesn't, create a new entry in the accumulator object
-    acc[obj.date] = {
-     date: obj.date,
-     usersDMed: [],
-     usersResponded: [],
-    };
+    dmsRepliedId = [...new Set(dmsRepliedId)];
+    console.log(dmsRepliedId);
+
+    await Op.findOneAndUpdate(
+     { _id: op._id },
+     {
+      usersResponded: [...dmsRepliedId],
+     }
+    );
    }
+  } catch (err) {
+   throw new Error(err);
+  }
+ }
 
-   // Create a Set to store the ids of the usersDMed and usersResponded arrays
-   let userDMedSet = new Set(acc[obj.date].usersDMed.map((user) => user.id));
-   let userRespondedSet = new Set(
-    acc[obj.date].usersResponded.map((user) => user.id)
-   );
-
-   // Iterate over the usersDMed array
-   obj.usersDMed.forEach((user) => {
-    // Check if the user's id is already in the Set
-    if (!userDMedSet.has(user.id)) {
-     // If it isn't, push the user to the array and add the id to the Set
-     acc[obj.date].usersDMed.push(user);
-     userDMedSet.add(user.id);
-    }
-   });
-
-   // Do the same for the usersResponded array
-   obj.usersResponded.forEach((user) => {
-    if (!userRespondedSet.has(user.id)) {
-     acc[obj.date].usersResponded.push(user);
-     userRespondedSet.add(user.id);
-    }
-   });
-
-   // Return the accumulator object to be used in the next iteration
-   return acc;
-  }, mergedData);
-
-  // Convert the mergedData object back to an array
-  let mergedArray = Object.values(mergedData);
-
-  console.log("full stats for: ", profile.name, mergedArray);
-
-  await Profile.findByIdAndUpdate(
-   {
-    _id: profile._id,
-   },
-   {
-    statistics: mergedArray,
-   }
-  );
-
-  mergedData = {};
-  days = [];
-  DMedUsers = [];
-  userResponded = [];
- });
+ console.log("stats recorded.");
 });
