@@ -123,12 +123,14 @@ app.get("/api/scrape", async (req, res) => {
   bioIncludes,
   verified,
   excludeLocation,
+  title,
  } = req.query;
  console.log(req.query);
 
  await connectToDB();
 
  const op = await Op.create({
+  title,
   user: userId,
   profile: profileId,
   usersDMed: [],

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const OperationSchema = new mongoose.Schema(
  {
+  title: String, 
   user: {
    type: mongoose.Schema.Types.ObjectId,
    ref: "user",
@@ -16,10 +17,6 @@ const OperationSchema = new mongoose.Schema(
     id: String,
    },
   ],
-  // tokens: {
-  //  auth_token: String,
-  //  ct0: String,
-  // },
   usersResponded: [{ id: String }],
   salesLetter: String,
  },
