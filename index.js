@@ -419,10 +419,7 @@ app.get("/api/record", async (req, res) => {
    let DMedUsers = [];
    let userResponded = [];
 
-   //  console.log(profile.statistics);
-
    profile.statistics.forEach(async (day) => {
-    console.log("day", day);
     day.usersDMed.forEach((user) => {
      for (let message of dms) {
       if (
@@ -449,9 +446,6 @@ app.get("/api/record", async (req, res) => {
       }
      }
     });
-
-    console.log("responded", userResponded);
-    console.log("day responses", day.usersResponded);
 
     let uniqueDMedUsers = [
      ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
