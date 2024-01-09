@@ -237,7 +237,7 @@ app.get("/api/scrape", async (req, res) => {
    const options = { method: "GET", headers: { accept: "*/*" } };
 
    const scrapeUserData = await axios.request(
-    `https://twitter.utools.me/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${username}`,
+    `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${username}`,
     options
    );
    const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
@@ -390,32 +390,27 @@ app.get("/api/scrape", async (req, res) => {
 app.get("/api/record", async (req, res) => {
  await connectToDB();
 
- const profiles = await Profile.find({})
-  .select("_id authTokens statistics user name")
-  .populate({
-   path: "operations",
-   model: Op,
-   select: "_id usersDMed usersResponded",
-  });
+ const profiles = await Profile.find({}).populate({
+  path: "operations",
+  model: Op,
+  select: "_id usersDMed usersResponded",
+ });
 
  for (let profile of profiles) {
   if (!profile) return;
   if (!profile.authTokens) return;
 
-  console.log("current profile", profile);
   const options = { method: "GET", headers: { accept: "*/*" } };
 
   try {
    const data = await axios.request(
-    `https://twitter.utools.me/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${encodeURIComponent(
+    `https://twitter2.good6.top/api/base/apitools/getDMSListV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${encodeURIComponent(
      profile.authTokens.auth_token
     )}&ct0=${encodeURIComponent(profile.authTokens.ct0)}&cursor=-1`,
     options
    );
 
    if (data.data.data === "Forbidden") return;
-   console.log(data.data);
-   console.log("profile", profile);
 
    const parsedDMs = await JSON.parse(data.data.data);
    const dms = parsedDMs.user_events.entries;
@@ -424,7 +419,10 @@ app.get("/api/record", async (req, res) => {
    let DMedUsers = [];
    let userResponded = [];
 
+   //  console.log(profile.statistics);
+
    profile.statistics.forEach(async (day) => {
+    console.log("day", day);
     day.usersDMed.forEach((user) => {
      for (let message of dms) {
       if (
@@ -433,8 +431,7 @@ app.get("/api/record", async (req, res) => {
       ) {
        let client = message.message?.message_data;
 
-       console.log("has replies", client);
-
+       //  console.log(client);
        DMedUsers.push({
         id: user.id,
         name: user.name,
@@ -444,8 +441,6 @@ app.get("/api/record", async (req, res) => {
         id: user.id,
         name: user.name,
        });
-
-       console.log("this user has replied: ", user.name);
       } else {
        DMedUsers.push({
         id: user.id,
@@ -455,12 +450,15 @@ app.get("/api/record", async (req, res) => {
      }
     });
 
+    console.log("responded", userResponded);
+    console.log("day responses", day.usersResponded);
+
     let uniqueDMedUsers = [
      ...new Map(DMedUsers.map((user) => [user.id, user])).values(),
     ];
     let uniqueDMedResponded = [
      ...new Map(
-      [...userResponded, ...day.userResponded].map((user) => [user.id, user])
+      [...userResponded, ...day.usersResponded].map((user) => [user.id, user])
      ).values(),
     ];
 
@@ -472,12 +470,11 @@ app.get("/api/record", async (req, res) => {
 
     DMedUsers = [];
     userResponded = [];
-
-    // console.log(DMedUsers, userResponded);
    });
 
-   console.log(days);
    let mergedData = {};
+
+   console.log(days);
 
    days.reduce((acc, obj) => {
     if (!acc[obj.date]) {
@@ -488,23 +485,18 @@ app.get("/api/record", async (req, res) => {
      };
     }
 
-    // Create a Set to store the ids of the usersDMed and usersResponded arrays
     let userDMedSet = new Set(acc[obj.date].usersDMed.map((user) => user.id));
     let userRespondedSet = new Set(
      acc[obj.date].usersResponded.map((user) => user.id)
     );
 
-    // Iterate over the usersDMed array
     obj.usersDMed.forEach((user) => {
-     // Check if the user's id is already in the Set
      if (!userDMedSet.has(user.id)) {
-      // If it isn't, push the user to the array and add the id to the Set
       acc[obj.date].usersDMed.push(user);
       userDMedSet.add(user.id);
      }
     });
 
-    // Do the same for the usersResponded array
     obj.usersResponded.forEach((user) => {
      if (!userRespondedSet.has(user.id)) {
       acc[obj.date].usersResponded.push(user);
@@ -512,11 +504,9 @@ app.get("/api/record", async (req, res) => {
      }
     });
 
-    // Return the accumulator object to be used in the next iteration
     return acc;
    }, mergedData);
 
-   // Convert the mergedData object back to an array
    let mergedArray = Object.values(mergedData);
 
    console.log("full stats for: ", profile.name, mergedArray);
@@ -534,8 +524,7 @@ app.get("/api/record", async (req, res) => {
    days = [];
    DMedUsers = [];
    userResponded = [];
-
-   let dmsRepliedId = []
+   let dmsRepliedId = [];
 
    for (let op of profile.operations) {
     op.usersDMed.forEach((user) => {
@@ -554,7 +543,6 @@ app.get("/api/record", async (req, res) => {
     });
 
     dmsRepliedId = [...new Set(dmsRepliedId)];
-    console.log(dmsRepliedId);
 
     await Op.findOneAndUpdate(
      { _id: op._id },
