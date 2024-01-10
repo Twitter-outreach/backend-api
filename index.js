@@ -186,7 +186,7 @@ app.get("/api/scrape", async (req, res) => {
  switch (paymentInfo.plan) {
   case "price_1ONGFBH5JVWNW8rNbhrFdjii":
    // Execute code for basic plan
-   maxDMsPerDay = 70;
+   maxDMsPerDay = 100;
    break;
   case "price_1ONGFZH5JVWNW8rNnAzGFJNj":
    // Execute code for standard plan
