@@ -184,15 +184,15 @@ app.get("/api/scrape", async (req, res) => {
  let maxDMsPerDay = 0;
 
  switch (paymentInfo.plan) {
-  case "price_1ONGFBH5JVWNW8rNbhrFdjii":
+  case "price_1OWjYrH5JVWNW8rNkQ1NIrue":
    // Execute code for basic plan
    maxDMsPerDay = 100;
    break;
-  case "price_1ONGFZH5JVWNW8rNnAzGFJNj":
+  case "price_1OWjYRH5JVWNW8rNsUiQwnMI":
    // Execute code for standard plan
    maxDMsPerDay = 200;
    break;
-  case "price_1ONGFtH5JVWNW8rNL5jDetrl":
+  case "price_1OWjXlH5JVWNW8rNDkcinBD3":
    // Execute code for premium plan
    maxDMsPerDay = 500;
    break;
