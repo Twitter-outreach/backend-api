@@ -6,6 +6,7 @@ const Op = require("./mongodb/operation.model.js");
 const User = require("./mongodb/user.model.js");
 const { sendDMs, sortUsers } = require("./lib");
 const Profile = require("./mongodb/profile.model.js");
+const BlueSea = require("./mongodb/BlueSea.model.js");
 
 const app = express();
 app.use(express.json());
@@ -77,7 +78,7 @@ app.get("/api/scrape", async (req, res) => {
   * This method calls the v2 followers blue endpoint by user ID
   */
  async function getListByUserId(apiKey, userId, cursor) {
-  const url = `https://twitter.utools.me/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
+  const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
    apiKey
   )}&cursor=${encodeURIComponent(cursor)}&userId=${userId}`;
 
@@ -551,4 +552,160 @@ app.get("/api/record", async (req, res) => {
  }
 
  console.log("stats recorded.");
+});
+
+app.get("/api/bluesea", async (req, res) => {
+ await connectToDB();
+
+ for (let id of [
+  "mws",
+  "PaddyG96",
+  "Cobratate",
+  "vidIQ",
+  "girdley",
+  "gregisenberg",
+  "realEstateTrent",
+  "charlesmiller_7",
+  "dickiebush",
+  "OneJKMolina",
+  "lukebelmar",
+  "WrongsToWrite",
+  "thejustinwelsh",
+  "thedankoe",
+  "AlexHormozi",
+ ]) {
+  let userData = [];
+
+  const blueIds = await BlueSea.find({}).select("_id id");
+  /*
+   * Recursively obtain blue authenticated users
+   */
+  async function getAllBlueFollowers(apiKey, userId, cursor) {
+   try {
+    const jsonStr = await getListByUserId(apiKey, userId, cursor);
+
+    const jsonObject = JSON.parse(jsonStr.data);
+    console.log(jsonObject);
+
+    const instructions =
+     jsonObject.data.user.result.timeline.timeline.instructions;
+    console.log(instructions);
+
+    for (let i = 0; i < instructions.length; i++) {
+     const instruction = instructions[i];
+
+     if (instruction.type === "TimelineAddEntries") {
+      const userArrays = instruction.entries;
+
+      for (let j = 0; j < userArrays.length; j++) {
+       const content = userArrays[j].content;
+
+       if (content.entryType === "TimelineTimelineItem") {
+        const userJson = content.itemContent.user_results.result;
+
+        userData.push(userJson);
+        console.log(userData.length);
+       } else if (
+        content.entryType === "TimelineTimelineCursor" &&
+        content.cursorType === "Bottom"
+       ) {
+        const cursorValue = content.value;
+        console.log(`index: ${j}, cursor = ${cursorValue}`);
+
+        if (cursorValue.startsWith("0|")) {
+         return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await getAllBlueFollowers(apiKey, userId, cursorValue);
+       }
+      }
+     }
+    }
+   } catch (error) {
+    console.error(error);
+   }
+  }
+
+  /*
+   * This method calls the v2 followers blue endpoint by user ID
+   */
+  async function getListByUserId(apiKey, userId, cursor) {
+   const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
+    apiKey
+   )}&cursor=${encodeURIComponent(cursor)}&userId=${userId}`;
+
+   try {
+    const response = await axios.get(url, {
+     headers: {
+      accept: "*/*",
+     },
+    });
+
+    const body = response.data;
+
+    // Record counts for future limiting
+    const headers = response.headers;
+    for (const headerName of Object.keys(headers)) {
+     if (headerName.toLowerCase().includes("limit")) {
+      const headerValue = headers[headerName];
+     }
+    }
+
+    if (response.status === 429) {
+     return "1";
+    }
+
+    return body;
+   } catch (error) {
+    console.error(error);
+    return "0";
+   }
+  }
+
+  const options = { method: "GET", headers: { accept: "*/*" } };
+  const apiKey =
+   "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
+  const scrapeUserData = await axios.request(
+   `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${id}`,
+   options
+  );
+  const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
+
+  console.log("parsed stuff", parsedScrapeUserData);
+
+  function removeUsersWithMatchingIds(userArray, idsToRemove) {
+   const idsToRemoveArray = idsToRemove.map((item) => item.id);
+   const filteredUsers = userArray.filter(
+    (user) => !idsToRemoveArray.includes(user.id)
+   );
+
+   return filteredUsers;
+  }
+
+  const userId = parsedScrapeUserData[0].id_str;
+  await getAllBlueFollowers(apiKey, userId, "-1");
+
+  const parsedUserData = userData?.map(({ rest_id, legacy }) => {
+   return {
+    id: rest_id,
+    screenName: legacy.screen_name,
+    name: legacy.name,
+    location: legacy.location.toLowerCase(),
+    description: legacy.description.toLowerCase(),
+    followers: legacy.followers_count,
+   };
+  });
+
+  const updatedUsers = removeUsersWithMatchingIds(parsedUserData, blueIds);
+
+  const filteredUsers = updatedUsers.filter(
+   (person) => person.followers >= 200
+  );
+
+  console.log(filteredUsers);
+  console.log(filteredUsers.length);
+
+  await BlueSea.insertMany([...filteredUsers]);
+ }
 });
