@@ -112,19 +112,20 @@ app.get("/api/scrape", async (req, res) => {
 
  // Example usage
 
- const {
-  profileId,
-  userId,
-  url,
-  scrapeOption,
-  followerRange,
-  excludeBioWords,
-  salesLetter,
-  bioIncludes,
-  verified,
-  excludeLocation,
-  title,
- } = req.query;
+ //  const {
+ //   profileId,
+ //   userId,
+ //   url,
+ //   scrapeOption,
+ //   followerRange,
+ //   excludeBioWords,
+ //   salesLetter,
+ //   bioIncludes,
+ //   verified,
+ //   excludeLocation,
+ //   title,
+ //  } = req.query;
+ const { profileId, title, url, userId, options, salesLetter } = req.query;
  console.log(req.query);
 
  await connectToDB();
@@ -167,7 +168,6 @@ app.get("/api/scrape", async (req, res) => {
  const username = parts[1];
 
  let users = [];
- let nextPageId = "-1";
  let limitCount = 0;
  // let scrapedUserId;
 
@@ -175,163 +175,167 @@ app.get("/api/scrape", async (req, res) => {
  let totalDMsSent = 0;
  let usersDMedToday = [];
 
- const user = await User.findById(userId).select("_id paymentInfo");
- const profileData = await Profile.findById(profileId).select(
-  "_id authTokens usersDMed"
- );
-
- const paymentInfo = user.paymentInfo;
-
- let maxDMsPerDay = 0;
-
- switch (paymentInfo.plan) {
-  case "price_1OWjYrH5JVWNW8rNkQ1NIrue":
-   // Execute code for basic plan
-   maxDMsPerDay = 100;
-   break;
-  case "price_1OWjYRH5JVWNW8rNsUiQwnMI":
-   // Execute code for standard plan
-   maxDMsPerDay = 200;
-   break;
-  case "price_1OWjXlH5JVWNW8rNDkcinBD3":
-   // Execute code for premium plan
-   maxDMsPerDay = 500;
-   break;
-  default:
-   console.log("User does not have any of the available plans");
-   return;
- }
-
- //  console.log(profileData);
- const opId = op._id.toString();
-
- while (nextPageId != 0 || limitCount > 500) {
-  const op = await Op.findById(opId).select("_id status");
-  let dateObj = new Date();
-  let day = dateObj.getDate();
-  let month = dateObj.getMonth() + 1; // months from 1-12
-  let year = dateObj.getFullYear();
-  let currentDate = day + "/" + month + "/" + year;
-
-  if (op.status === "TERMINATED") {
-   await Profile.findOneAndUpdate(
-    { _id: profileData._id },
-    {
-     $push: {
-      statistics: {
-       date: currentDate,
-       usersDMed: usersDMedToday,
-       usersResponded: [],
-      },
-     },
-    }
-   );
-
-   console.log("TERMINATED");
-   console.log("STATS RECORDED");
-   break;
-  }
-
-  let parsedUserData;
-
-  if (verified === "true") {
-   const options = { method: "GET", headers: { accept: "*/*" } };
-
-   const scrapeUserData = await axios.request(
-    `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${username}`,
-    options
-   );
-   const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
-
-   console.log("parsed stuff", parsedScrapeUserData);
-   //
-   const apiKey =
-    "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
-
-   const userId = parsedScrapeUserData[0].id_str;
-   await getAllBlueFollowers(apiKey, userId, "-1");
-
-   parsedUserData = userData?.map(({ rest_id, legacy }) => {
-    return {
-     id: rest_id,
-     name: legacy.name,
-     location: legacy.location.toLowerCase(),
-     description: legacy.description.toLowerCase(),
-     followers: legacy.followers_count,
-    };
-   });
-
-   console.log("end users.", parsedUserData);
-   console.log("end users.length", parsedUserData.length);
-
-   nextPageId = 0;
-   //
-  } else {
-   const options = {
-    method: "GET",
-    url: `https://twitter2.good6.top/api/base/apitools/${
-     scrapeOption === "followers" ? "followersList" : "followingsList"
-    }`,
-    params: {
-     apiKey:
-      "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
-     cursor: nextPageId,
-     screenName: username,
-    },
-    headers: { accept: "*/*" },
-   };
-
-   const userData = await axios.request(options);
-   const parsedData = await JSON.parse(userData.data.data);
-   if (!parsedData) return;
-   parsedUserData = parsedData.users?.map(
-    ({ id_str, name, location, description, followers_count }) => {
-     return {
-      id: id_str,
-      name,
-      location: location.toLowerCase(),
-      description: description.toLowerCase(),
-      followers: followers_count,
-     };
-    }
-   );
-   nextPageId = parsedData.next_cursor_str;
-   console.log(parsedUserData?.length);
-  }
-
-  limitCount++;
-
-  users = [...parsedUserData];
-
-  console.log("users fetched: ", users.length);
-  console.log("parsing...");
-
-  const sortedUsers = sortUsers(parsedUserData, {
-   followerRange,
-   bioExclude: excludeBioWords,
-   usersDMed: profileData.usersDMed,
-   bioIncludes,
-   excludeLocation,
-  });
-
-  console.log("found prospects: ", sortedUsers.length);
-
-  const currentUserId = JSON.stringify(user._id);
-
-  await sendDMs(
-   sortedUsers,
-   profileData,
-   salesLetter,
-   opId,
-   currentUserId,
-   sentDMs,
-   totalDMsSent,
-   maxDMsPerDay,
-   usersDMedToday
+ for (let profile of options[0].state) {
+  let nextPageId = "-1";
+  const user = await User.findById(userId).select("_id paymentInfo");
+  const profileData = await Profile.findById(profileId).select(
+   "_id authTokens usersDMed"
   );
 
-  console.log("another one.");
+  const paymentInfo = user.paymentInfo;
+
+  let maxDMsPerDay = 0;
+
+  switch (paymentInfo.plan) {
+   case "price_1OWjYrH5JVWNW8rNkQ1NIrue":
+    // Execute code for basic plan
+    maxDMsPerDay = 100;
+    break;
+   case "price_1OWjYRH5JVWNW8rNsUiQwnMI":
+    // Execute code for standard plan
+    maxDMsPerDay = 200;
+    break;
+   case "price_1OWjXlH5JVWNW8rNDkcinBD3":
+    // Execute code for premium plan
+    maxDMsPerDay = 500;
+    break;
+   default:
+    console.log("User does not have any of the available plans");
+    return;
+  }
+
+  //  console.log(profileData);
+  const opId = op._id.toString();
+
+  while (nextPageId != 0 || limitCount > 500) {
+   const op = await Op.findById(opId).select("_id status");
+   let dateObj = new Date();
+   let day = dateObj.getDate();
+   let month = dateObj.getMonth() + 1; // months from 1-12
+   let year = dateObj.getFullYear();
+   let currentDate = day + "/" + month + "/" + year;
+
+   if (op.status === "TERMINATED") {
+    await Profile.findOneAndUpdate(
+     { _id: profileData._id },
+     {
+      $push: {
+       statistics: {
+        date: currentDate,
+        usersDMed: usersDMedToday,
+        usersResponded: [],
+       },
+      },
+     }
+    );
+
+    console.log("TERMINATED");
+    console.log("STATS RECORDED");
+    break;
+   }
+
+   let parsedUserData;
+
+   if (verified === "true") {
+    const options = { method: "GET", headers: { accept: "*/*" } };
+
+    const scrapeUserData = await axios.request(
+     `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${profile}`,
+     options
+    );
+    const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
+
+    console.log("parsed stuff", parsedScrapeUserData);
+    //
+    const apiKey =
+     "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
+
+    const userId = parsedScrapeUserData[0].id_str;
+    await getAllBlueFollowers(apiKey, userId, "-1");
+
+    parsedUserData = userData?.map(({ rest_id, legacy }) => {
+     return {
+      id: rest_id,
+      name: legacy.name,
+      location: legacy.location.toLowerCase(),
+      description: legacy.description.toLowerCase(),
+      followers: legacy.followers_count,
+     };
+    });
+
+    console.log("end users.", parsedUserData);
+    console.log("end users.length", parsedUserData.length);
+
+    nextPageId = 0;
+    //
+   } else {
+    const options = {
+     method: "GET",
+     url: `https://twitter2.good6.top/api/base/apitools/${
+      scrapeOption === "followers" ? "followersList" : "followingsList"
+     }`,
+     params: {
+      apiKey:
+       "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
+      cursor: nextPageId,
+      screenName: profile,
+     },
+     headers: { accept: "*/*" },
+    };
+
+    const userData = await axios.request(options);
+    const parsedData = await JSON.parse(userData.data.data);
+    if (!parsedData) return;
+    parsedUserData = parsedData.users?.map(
+     ({ id_str, name, location, description, followers_count }) => {
+      return {
+       id: id_str,
+       name,
+       location: location.toLowerCase(),
+       description: description.toLowerCase(),
+       followers: followers_count,
+      };
+     }
+    );
+    nextPageId = parsedData.next_cursor_str;
+    console.log(parsedUserData?.length);
+   }
+
+   limitCount++;
+
+   users = [...parsedUserData];
+
+   console.log("users fetched: ", users.length);
+   console.log("parsing...");
+
+   const sortedUsers = sortUsers(parsedUserData, {
+    followerRange,
+    bioExclude: excludeBioWords,
+    usersDMed: profileData.usersDMed,
+    bioIncludes,
+    excludeLocation,
+   });
+
+   console.log("found prospects: ", sortedUsers.length);
+
+   const currentUserId = JSON.stringify(user._id);
+
+   await sendDMs(
+    sortedUsers,
+    profileData,
+    salesLetter,
+    opId,
+    currentUserId,
+    sentDMs,
+    totalDMsSent,
+    maxDMsPerDay,
+    usersDMedToday
+   );
+
+   console.log("another one.");
+  }
  }
+
  let dateObj = new Date();
  let day = dateObj.getDate();
  let month = dateObj.getMonth() + 1; // months from 1-12
@@ -558,17 +562,6 @@ app.get("/api/bluesea", async (req, res) => {
  await connectToDB();
 
  for (let id of [
-  "mws",
-  "PaddyG96",
-  "Cobratate",
-  "vidIQ",
-  "girdley",
-  "gregisenberg",
-  "realEstateTrent",
-  "charlesmiller_7",
-  "dickiebush",
-  "OneJKMolina",
-  "lukebelmar",
   "WrongsToWrite",
   "thejustinwelsh",
   "thedankoe",
