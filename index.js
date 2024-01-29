@@ -125,7 +125,7 @@ app.get("/api/scrape", async (req, res) => {
  //   excludeLocation,
  //   title,
  //  } = req.query;
- const { profileId, title, url, userId, options, salesLetter } = req.query;
+ const { profileId, title, userId, options, salesLetter } = req.query;
  console.log(req.query);
 
  await connectToDB();
@@ -163,9 +163,9 @@ app.get("/api/scrape", async (req, res) => {
 
  res.send({ message: "scrape in progress!" });
 
- const user_url = new URL(url);
- const parts = user_url.pathname.split("/");
- const username = parts[1];
+ //  const user_url = new URL(url);
+ //  const parts = user_url.pathname.split("/");
+ //  const username = parts[1];
 
  let users = [];
  let limitCount = 0;
