@@ -236,7 +236,7 @@ app.get("/api/scrape", async (req, res) => {
 
    let parsedUserData;
 
-   if (verified === "true") {
+   if (options[5].triggered) {
     const options = { method: "GET", headers: { accept: "*/*" } };
 
     const scrapeUserData = await axios.request(
@@ -308,13 +308,11 @@ app.get("/api/scrape", async (req, res) => {
    console.log("users fetched: ", users.length);
    console.log("parsing...");
 
-   const sortedUsers = sortUsers(parsedUserData, {
-    followerRange,
-    bioExclude: excludeBioWords,
-    usersDMed: profileData.usersDMed,
-    bioIncludes,
-    excludeLocation,
-   });
+   const sortedUsers = sortUsers(
+    parsedUserData,
+    options,
+    profileData.usersDMed
+   );
 
    console.log("found prospects: ", sortedUsers.length);
 
