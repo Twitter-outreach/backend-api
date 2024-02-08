@@ -236,7 +236,7 @@ app.get("/api/scrape", async (req, res) => {
 
    let parsedUserData;
 
-   if (options[5].triggered) {
+   if (options[5].triggered === "true") {
     const options = { method: "GET", headers: { accept: "*/*" } };
 
     const scrapeUserData = await axios.request(
