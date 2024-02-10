@@ -11,7 +11,7 @@ const BlueSea = require("./mongodb/BlueSea.model.js");
 const app = express();
 app.use(express.json());
 app.use(cors());
-const port = 3030;
+const port = 80;
 
 app.listen(port, (req, res) => {
  console.log("we are up and running");
@@ -110,21 +110,6 @@ app.get("/api/scrape", async (req, res) => {
   }
  }
 
- // Example usage
-
- //  const {
- //   profileId,
- //   userId,
- //   url,
- //   scrapeOption,
- //   followerRange,
- //   excludeBioWords,
- //   salesLetter,
- //   bioIncludes,
- //   verified,
- //   excludeLocation,
- //   title,
- //  } = req.query;
  const { profileId, title, userId, options, salesLetter } = req.query;
  console.log(req.query);
 
@@ -163,13 +148,8 @@ app.get("/api/scrape", async (req, res) => {
 
  res.send({ message: "scrape in progress!" });
 
- //  const user_url = new URL(url);
- //  const parts = user_url.pathname.split("/");
- //  const username = parts[1];
-
  let users = [];
  let limitCount = 0;
- // let scrapedUserId;
 
  let sentDMs = 0;
  let totalDMsSent = 0;
@@ -187,15 +167,15 @@ app.get("/api/scrape", async (req, res) => {
   let maxDMsPerDay = 0;
 
   switch (paymentInfo.plan) {
-   case "price_1OWjYrH5JVWNW8rNkQ1NIrue":
+   case "price_1ONGFBH5JVWNW8rNbhrFdjii":
     // Execute code for basic plan
     maxDMsPerDay = 100;
     break;
-   case "price_1OWjYRH5JVWNW8rNsUiQwnMI":
+   case "price_1ONGFZH5JVWNW8rNnAzGFJNj":
     // Execute code for standard plan
     maxDMsPerDay = 200;
     break;
-   case "price_1OWjXlH5JVWNW8rNDkcinBD3":
+   case "price_1ONGFtH5JVWNW8rNL5jDetrl":
     // Execute code for premium plan
     maxDMsPerDay = 500;
     break;

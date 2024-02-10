@@ -42,6 +42,12 @@ const UserSchema = new mongoose.Schema({
    ref: "operation",
   },
  ],
+ templates: [
+  {
+   type: mongoose.Schema.Types.ObjectId,
+   ref: "template",
+  },
+ ],
  live_updates: [
   {
    message: String,
