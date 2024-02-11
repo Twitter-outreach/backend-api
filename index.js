@@ -251,9 +251,10 @@ app.get("/api/scrape", async (req, res) => {
    } else {
     const options = {
      method: "GET",
-     url: `https://twitter2.good6.top/api/base/apitools/${
-      scrapeOption === "followers" ? "followersList" : "followingsList"
-     }`,
+     //  url: `https://twitter2.good6.top/api/base/apitools/${
+     //   scrapeOption === "followers" ? "followersList" : "followingsList"
+     //  }`,
+     url: `https://twitter2.good6.top/api/base/apitools/${"followersList"}`,
      params: {
       apiKey:
        "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI",
