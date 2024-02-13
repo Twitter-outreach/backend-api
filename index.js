@@ -11,7 +11,7 @@ const BlueSea = require("./mongodb/BlueSea.model.js");
 const app = express();
 app.use(express.json());
 app.use(cors());
-const port = 80;
+const port = 3030;
 
 app.listen(port, (req, res) => {
  console.log("we are up and running");
