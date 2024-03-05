@@ -10,8 +10,24 @@ const BlueSea = require("./mongodb/BlueSea.model.js");
 
 const app = express();
 app.use(express.json());
+
+// const corsOptions = {
+//     origin: function (origin, callback) {
+//         if (origin.endsWith('.xreacher.com')) {
+//             callback(null, true)
+//         } else {
+//             callback(new Error('Not allowed by CORS'))
+//         }
+//     },
+//     credentials: true,
+// };
+
+// app.use(cors(corsOptions));
+
+// CORS
 app.use(cors());
-const port = 3030;
+
+const port = 4020; // old port was set to 3030
 
 app.listen(port, (req, res) => {
  console.log("we are up and running");
@@ -78,9 +94,11 @@ app.get("/api/scrape", async (req, res) => {
   * This method calls the v2 followers blue endpoint by user ID
   */
  async function getListByUserId(apiKey, userId, cursor) {
-  const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
-   apiKey
-  )}&cursor=${encodeURIComponent(cursor)}&userId=${userId}`;
+  // const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
+  //  apiKey
+  // )}&cursor=${encodeURIComponent(cursor)}&userId=${userId}`;
+
+  const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&cursor=${cursor}&userId=${userId}`;
 
   try {
    const response = await axios.get(url, {
@@ -266,6 +284,9 @@ app.get("/api/scrape", async (req, res) => {
 
     const userData = await axios.request(options);
     const parsedData = await JSON.parse(userData.data.data);
+
+    parsedData ? console.log(parsedData.users.length) : null;
+
     if (!parsedData) return;
     parsedUserData = parsedData.users?.map(
      ({ id_str, name, location, description, followers_count }) => {
@@ -638,46 +659,52 @@ app.get("/api/bluesea", async (req, res) => {
   const options = { method: "GET", headers: { accept: "*/*" } };
   const apiKey =
    "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
-  const scrapeUserData = await axios.request(
-   `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${id}`,
-   options
-  );
-  const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
+    const scrapeUserData = await axios.request(
+    `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${id}`,
+    options
+    );
+    
+    if (scrapeUserData.data.data === "Not Found") {
+      console.error("User not found");
+      // Handle the error case here
+    } else {
+      const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
 
-  console.log("parsed stuff", parsedScrapeUserData);
+      console.log("parsed stuff", parsedScrapeUserData);
 
-  function removeUsersWithMatchingIds(userArray, idsToRemove) {
-   const idsToRemoveArray = idsToRemove.map((item) => item.id);
-   const filteredUsers = userArray.filter(
-    (user) => !idsToRemoveArray.includes(user.id)
-   );
+      function removeUsersWithMatchingIds(userArray, idsToRemove) {
+        const idsToRemoveArray = idsToRemove.map((item) => item.id);
+        const filteredUsers = userArray.filter(
+          (user) => !idsToRemoveArray.includes(user.id)
+        );
 
-   return filteredUsers;
+        return filteredUsers;
+      }
+
+      const userId = parsedScrapeUserData[0].id_str;
+      await getAllBlueFollowers(apiKey, userId, "-1");
+
+      const parsedUserData = userData?.map(({ rest_id, legacy }) => {
+        return {
+          id: rest_id,
+          screenName: legacy.screen_name,
+          name: legacy.name,
+          location: legacy.location.toLowerCase(),
+          description: legacy.description.toLowerCase(),
+          followers: legacy.followers_count,
+        };
+      });
+
+      const updatedUsers = removeUsersWithMatchingIds(parsedUserData, blueIds);
+
+      const filteredUsers = updatedUsers.filter(
+      (person) => person.followers >= 200
+      );
+
+      console.log(filteredUsers);
+      console.log(filteredUsers.length);
+
+      await BlueSea.insertMany([...filteredUsers]);
+    }
   }
-
-  const userId = parsedScrapeUserData[0].id_str;
-  await getAllBlueFollowers(apiKey, userId, "-1");
-
-  const parsedUserData = userData?.map(({ rest_id, legacy }) => {
-   return {
-    id: rest_id,
-    screenName: legacy.screen_name,
-    name: legacy.name,
-    location: legacy.location.toLowerCase(),
-    description: legacy.description.toLowerCase(),
-    followers: legacy.followers_count,
-   };
-  });
-
-  const updatedUsers = removeUsersWithMatchingIds(parsedUserData, blueIds);
-
-  const filteredUsers = updatedUsers.filter(
-   (person) => person.followers >= 200
-  );
-
-  console.log(filteredUsers);
-  console.log(filteredUsers.length);
-
-  await BlueSea.insertMany([...filteredUsers]);
- }
 });
