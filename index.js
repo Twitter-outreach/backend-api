@@ -11,21 +11,10 @@ const BlueSea = require("./mongodb/BlueSea.model.js");
 const app = express();
 app.use(express.json());
 
-// const corsOptions = {
-//     origin: function (origin, callback) {
-//         if (origin.endsWith('.xreacher.com')) {
-//             callback(null, true)
-//         } else {
-//             callback(new Error('Not allowed by CORS'))
-//         }
-//     },
-//     credentials: true,
-// };
-
-// app.use(cors(corsOptions));
-
 // CORS
-app.use(cors());
+app.use(cors(
+  { origin: ["http://localhost:3000", /\.xreacher.com$/] }
+));
 
 const port = 4020; // old port was set to 3030
 
