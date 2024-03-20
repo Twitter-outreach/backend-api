@@ -97,6 +97,7 @@ app.get("/api/scrape", async (req, res) => {
    });
 
    const body = response.data;
+   console.log("verified body", body); // log the response body to the console
 
    // Record counts for future limiting
    const headers = response.headers;
@@ -163,26 +164,39 @@ app.get("/api/scrape", async (req, res) => {
  let usersDMedToday = [];
 
  for (let profile of options[0].state) {
+  //new account
   let nextPageId = "-1";
   const user = await User.findById(userId).select("_id paymentInfo");
+  // fetch profile data
   const profileData = await Profile.findById(profileId).select(
    "_id authTokens usersDMed"
   );
+
+  // unlocks the twitter profile
+    const url = `https://twitter2.good6.top/api/base/apitools/unlock?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&auth_token=${profileData.authTokens.auth_token}&ct0=${profileData.authTokens.ct0}`;
+
+   const response = await axios.get(url, {
+    headers: {
+     accept: "*/*",
+    },
+   });
+   console.log("Unlocked",response)
+
 
   const paymentInfo = user.paymentInfo;
 
   let maxDMsPerDay = 0;
 
   switch (paymentInfo.plan) {
-   case "price_1ONGFBH5JVWNW8rNbhrFdjii":
+   case "price_1OP32TH5JVWNW8rNaZkUVxEv":
     // Execute code for basic plan
     maxDMsPerDay = 100;
-    break;
-   case "price_1ONGFZH5JVWNW8rNnAzGFJNj":
+    bre
+   case "price_1OP34iH5JVWNW8rNgMrWPZlf":
     // Execute code for standard plan
     maxDMsPerDay = 200;
     break;
-   case "price_1ONGFtH5JVWNW8rNL5jDetrl":
+   case "price_1OP35uH5JVWNW8rNOq5BHgo5":
     // Execute code for premium plan
     maxDMsPerDay = 500;
     break;
@@ -195,31 +209,33 @@ app.get("/api/scrape", async (req, res) => {
   const opId = op._id.toString();
 
   while (nextPageId != 0 || limitCount > 500) {
-   const op = await Op.findById(opId).select("_id status");
-   let dateObj = new Date();
-   let day = dateObj.getDate();
-   let month = dateObj.getMonth() + 1; // months from 1-12
-   let year = dateObj.getFullYear();
-   let currentDate = day + "/" + month + "/" + year;
+  //  const op = await Op.findById(opId).select("_id status");
+  //  let dateObj = new Date();
+  //  let day = dateObj.getDate();
+  //  let month = dateObj.getMonth() + 1; // months from 1-12
+  //  let year = dateObj.getFullYear();
+  //  let currentDate = day + "/" + month + "/" + year;
 
-   if (op.status === "TERMINATED") {
-    await Profile.findOneAndUpdate(
-     { _id: profileData._id },
-     {
-      $push: {
-       statistics: {
-        date: currentDate,
-        usersDMed: usersDMedToday,
-        usersResponded: [],
-       },
-      },
-     }
-    );
+  //  if (op.status === "TERMINATED") {
+  //   await Profile.findOneAndUpdate(
+  //    { _id: profileData._id },
+  //    {
+  //     $push: {
+  //      statistics: {
+  //       date: currentDate,
+  //       usersDMed: usersDMedToday,
+  //       usersResponded: [],
+  //      },
+  //     },
+  //    }
+  //   );
 
-    console.log("TERMINATED");
-    console.log("STATS RECORDED");
-    break;
-   }
+  //   console.log("TERMINATED");
+  //   console.log("STATS RECORDED");
+  //   break;
+  //  }
+
+  
 
    let parsedUserData;
 
@@ -230,9 +246,11 @@ app.get("/api/scrape", async (req, res) => {
      `https://twitter2.good6.top/api/base/apitools/uerByIdOrNameLookUp?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&screenName=${profile}`,
      options
     );
+    // log the response body to the console
+    // console.log(scrapeUserData.data.data);
     const parsedScrapeUserData = JSON.parse(scrapeUserData.data.data);
 
-    console.log("parsed stuff", parsedScrapeUserData);
+    // console.log("parsed stuff", parsedScrapeUserData);
     //
     const apiKey =
      "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
@@ -272,9 +290,12 @@ app.get("/api/scrape", async (req, res) => {
     };
 
     const userData = await axios.request(options);
+    // log the response body to the console
+    // console.log("userData: ", userData)
     const parsedData = await JSON.parse(userData.data.data);
-
-    parsedData ? console.log(parsedData.users.length) : null;
+    // log the response body to the console
+    // console.log("parsedData: ", parsedData)
+    // parsedData ? console.log(parsedData.users.length) : null;
 
     if (!parsedData) return;
     parsedUserData = parsedData.users?.map(
@@ -407,6 +428,8 @@ app.get("/api/record", async (req, res) => {
    if (data.data.data === "Forbidden") return;
 
    const parsedDMs = await JSON.parse(data.data.data);
+   console.log("Parsed DMs", parsedDMs)
+
    const dms = parsedDMs.user_events.entries;
 
    let days = [];
@@ -613,38 +636,41 @@ app.get("/api/bluesea", async (req, res) => {
    * This method calls the v2 followers blue endpoint by user ID
    */
   async function getListByUserId(apiKey, userId, cursor) {
-   const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=${encodeURIComponent(
-    apiKey
-   )}&cursor=${encodeURIComponent(cursor)}&userId=${userId}`;
-
-   try {
-    const response = await axios.get(url, {
-     headers: {
-      accept: "*/*",
-     },
-    });
-
-    const body = response.data;
-
-    // Record counts for future limiting
-    const headers = response.headers;
-    for (const headerName of Object.keys(headers)) {
-     if (headerName.toLowerCase().includes("limit")) {
-      const headerValue = headers[headerName];
-     }
+    const url = `https://twitter2.good6.top/api/base/apitools/blueVerifiedFollowersV2?apiKey=NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6%7C1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI&cursor=${cursor}&userId=${userId}`;
+  
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          accept: "*/*",
+        },
+      });
+  
+      const body = response.data;
+  
+      // Log the response body
+      console.log("Response:", body);
+  
+      // Record counts for future limiting
+      const headers = response.headers;
+      for (const headerName of Object.keys(headers)) {
+        if (headerName.toLowerCase().includes("limit")) {
+          const headerValue = headers[headerName];
+          console.log(`Header ${headerName}: ${headerValue}`);
+        }
+      }
+  
+      if (response.status === 429) {
+        console.log("API rate limit exceeded");
+        return "1";
+      }
+  
+      return body;
+    } catch (error) {
+      console.error("Error occurred:", error);
+      return "0";
     }
-
-    if (response.status === 429) {
-     return "1";
-    }
-
-    return body;
-   } catch (error) {
-    console.error(error);
-    return "0";
-   }
   }
-
+  
   const options = { method: "GET", headers: { accept: "*/*" } };
   const apiKey =
    "NJFa6ypiHNN2XvbeyZeyMo89WkzWmjfT3GI26ULhJeqs6|1539340831986966534-8FyvB4o9quD9PLiBJJJlzlZVvK9mdI";
